@@ -11,6 +11,7 @@ from optical_flow import (
     detect_road_with_optical_flow,
     endpoint_error,
     multiresolution_horn_schunck,
+    postprocess_road_mask,
 )
 from optical_flow.image_ops import resize_flow, warp_bilinear
 
@@ -106,6 +107,17 @@ def test_analyze_road_mask_reports_center_and_area() -> None:
     assert metrics.road_center_x is not None
     assert metrics.road_center_offset_px is not None
     assert metrics.valid_road is True
+
+
+def test_postprocess_road_mask_keeps_bottom_component() -> None:
+    mask = np.zeros((80, 100), dtype=np.uint8)
+    mask[60:78, 10:90] = 255
+    mask[5:15, 5:25] = 255
+
+    cleaned = postprocess_road_mask(mask, mask.shape, min_area_ratio=0.005, bottom_roi_ratio=0.35)
+
+    assert cleaned[70, 50] > 0
+    assert cleaned[10, 10] == 0
 
 
 def test_native_flow_road_fusion_returns_debug_maps() -> None:

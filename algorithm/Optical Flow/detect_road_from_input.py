@@ -4,7 +4,15 @@ from pathlib import Path
 
 import cv2
 
-from optical_flow import RoadDetectionConfig, analyze_road_mask, detect_road_from_path, overlay_road_metrics
+from optical_flow import (
+    RoadDetectionConfig,
+    analyze_road_mask,
+    detect_road_from_path,
+    metrics_row,
+    overlay_road_metrics,
+    write_metrics_csv,
+    write_summary_json,
+)
 
 
 def main() -> None:
@@ -20,6 +28,7 @@ def main() -> None:
     if not image_paths:
         raise FileNotFoundError("No input images found under ./input")
 
+    rows = []
     for path in image_paths:
         image, mask, overlay = detect_road_from_path(path, config)
         metrics = analyze_road_mask(mask, image.shape)
@@ -31,6 +40,7 @@ def main() -> None:
         cv2.imwrite(str(mask_path), mask)
         cv2.imwrite(str(overlay_path), overlay)
         cv2.imwrite(str(metrics_path), metrics_overlay)
+        rows.append(metrics_row(path.name, metrics, mask_path, overlay_path, metrics_path))
 
         print(f"{path.name}: road_ratio={metrics.road_area_ratio:.3f}")
         print(f"  state={metrics.stability_label}")
@@ -39,6 +49,21 @@ def main() -> None:
         print(f"  mask={mask_path}")
         print(f"  overlay={overlay_path}")
         print(f"  metrics_overlay={metrics_path}")
+
+    csv_path = output_dir / "road_metrics.csv"
+    summary_path = output_dir / "road_summary.json"
+    write_metrics_csv(csv_path, rows)
+    write_summary_json(
+        summary_path,
+        rows,
+        {
+            "method": "classical_road_detection",
+            "input_dir": str(input_dir),
+            "output_dir": str(output_dir),
+        },
+    )
+    print(f"metrics_csv={csv_path}")
+    print(f"summary_json={summary_path}")
 
 
 if __name__ == "__main__":

@@ -1,9 +1,10 @@
-# Optical Flow
+# Road Surface Segmentation and Optical Flow Fusion
 
-This workspace contains a compact Python implementation of dense optical flow
-based on the multiresolution Horn-Schunck method with bilinear interpolation.
-It also includes a classical single-image road detection pipeline for images
-placed under `input/`.
+This repository provides a PC-side validation pipeline for road surface
+perception. It combines YOLOv8 segmentation, classical road scoring, and
+optical-flow-based temporal fusion to evaluate road surface masks and engineering
+metrics such as road area ratio, center offset, boundary smoothness, and
+stability.
 
 ## Scope
 
@@ -32,7 +33,10 @@ python detect_fused_road_pair.py --prev input/frame_0001.jpg --curr input/frame_
 The demo writes `outputs/synthetic_flow.png`.
 Road detection writes `outputs/*_road_mask.png` and `outputs/*_road_overlay.png`.
 Road detection also writes `outputs/*_road_metrics_overlay.png`.
+Road detection writes `outputs/road_metrics.csv` and `outputs/road_summary.json`.
 Flow-road fusion writes inspectable maps under `outputs/fusion_debug` by default.
+YOLO inference writes `outputs/segmentation_infer/segmentation_metrics.csv` and
+`outputs/segmentation_infer/segmentation_summary.json`.
 
 ## Road Surface Segmentation MVP
 
@@ -54,3 +58,5 @@ Target class:
 ```text
 road_surface
 ```
+
+Labeling rules and split policy are documented in `road_dataset/README.md`.

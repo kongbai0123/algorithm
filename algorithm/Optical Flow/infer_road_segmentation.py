@@ -4,23 +4,17 @@ import argparse
 from pathlib import Path
 
 import cv2
-import numpy as np
 from ultralytics import YOLO
 
-from optical_flow import analyze_road_mask, make_road_overlay, overlay_road_metrics
-
-
-def _largest_mask(result) -> np.ndarray | None:
-    masks = getattr(result, "masks", None)
-    if masks is None or masks.data is None or len(masks.data) == 0:
-        return None
-
-    data = masks.data.detach().cpu().numpy()
-    if data.ndim != 3:
-        return None
-    areas = data.reshape(data.shape[0], -1).sum(axis=1)
-    index = int(np.argmax(areas))
-    return (data[index] > 0.5).astype(np.uint8) * 255
+from optical_flow import (
+    analyze_road_mask,
+    make_road_overlay,
+    metrics_row,
+    overlay_road_metrics,
+    select_road_mask_from_yolo_result,
+    write_metrics_csv,
+    write_summary_json,
+)
 
 
 def main() -> None:
@@ -31,6 +25,8 @@ def main() -> None:
     parser.add_argument("--imgsz", type=int, default=640, help="inference image size")
     parser.add_argument("--conf", type=float, default=0.25, help="confidence threshold")
     parser.add_argument("--out", default="outputs/segmentation_infer", help="output directory")
+    parser.add_argument("--min-area-ratio", type=float, default=0.01, help="minimum connected road component area ratio")
+    parser.add_argument("--bottom-roi-ratio", type=float, default=0.35, help="bottom ROI ratio used to keep road components")
     args = parser.parse_args()
 
     weights_path = Path(args.weights)
@@ -55,15 +51,19 @@ def main() -> None:
     if not image_paths:
         raise FileNotFoundError(f"No input images found under: {source_path}")
 
+    rows = []
     for image_path in image_paths:
         image = cv2.imread(str(image_path))
         if image is None:
             raise FileNotFoundError(f"Unable to read image: {image_path}")
 
         result = model.predict(source=str(image_path), imgsz=args.imgsz, conf=args.conf, verbose=False)[0]
-        mask = _largest_mask(result)
-        if mask is None:
-            mask = np.zeros(image.shape[:2], dtype=np.uint8)
+        mask = select_road_mask_from_yolo_result(
+            result,
+            image.shape,
+            min_area_ratio=args.min_area_ratio,
+            bottom_roi_ratio=args.bottom_roi_ratio,
+        )
 
         overlay = make_road_overlay(image, mask)
         metrics = analyze_road_mask(mask, image.shape)
@@ -71,11 +71,33 @@ def main() -> None:
 
         stem = image_path.stem
         cv2.imwrite(str(out_dir / f"{stem}_seg_mask.png"), mask)
-        cv2.imwrite(str(out_dir / f"{stem}_seg_overlay.png"), overlay)
-        cv2.imwrite(str(out_dir / f"{stem}_seg_metrics_overlay.png"), metrics_overlay)
+        overlay_path = out_dir / f"{stem}_seg_overlay.png"
+        metrics_path = out_dir / f"{stem}_seg_metrics_overlay.png"
+        mask_path = out_dir / f"{stem}_seg_mask.png"
+        cv2.imwrite(str(overlay_path), overlay)
+        cv2.imwrite(str(metrics_path), metrics_overlay)
+        rows.append(metrics_row(image_path.name, metrics, mask_path, overlay_path, metrics_path))
         print(f"{image_path.name}: area={metrics.road_area_ratio:.3f} offset={0.0 if metrics.road_center_offset_px is None else metrics.road_center_offset_px:.2f} state={metrics.stability_label}")
+
+    csv_path = out_dir / "segmentation_metrics.csv"
+    summary_path = out_dir / "segmentation_summary.json"
+    write_metrics_csv(csv_path, rows)
+    write_summary_json(
+        summary_path,
+        rows,
+        {
+            "method": "yolo_segmentation",
+            "weights": str(weights_path),
+            "source": str(source_path),
+            "imgsz": args.imgsz,
+            "conf": args.conf,
+            "min_area_ratio": args.min_area_ratio,
+            "bottom_roi_ratio": args.bottom_roi_ratio,
+        },
+    )
+    print(f"metrics_csv={csv_path}")
+    print(f"summary_json={summary_path}")
 
 
 if __name__ == "__main__":
     main()
-
