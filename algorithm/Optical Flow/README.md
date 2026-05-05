@@ -28,6 +28,8 @@ python demo_synthetic.py
 python run_road_pipeline.py --source input
 python run_road_pipeline.py --source "input/3_Video Project.mp4" --mode video --method classical --progress-every 10
 python run_road_pipeline.py --source "input/3_Video Project.mp4" --mode video --start-frame 841 --progress-every 5
+python run_road_pipeline.py --mode pair --prev input/frame_0001.jpg --curr input/frame_0002.jpg
+python run_road_pipeline.py --mode flow-compare --prev input/frame_0001.jpg --curr input/frame_0002.jpg
 python detect_road_from_input.py
 python train_road_segmentation.py --model yolov8n-seg.pt --data road_dataset/road.yaml
 python infer_road_segmentation.py --weights runs/road_segmentation/yolov8n_seg_mvp/weights/best.pt
@@ -45,6 +47,9 @@ Flow-road fusion writes inspectable maps under `outputs/fusion_debug` by default
 YOLO inference writes `outputs/segmentation_infer/segmentation_metrics.csv` and
 `outputs/segmentation_infer/segmentation_summary.json`.
 Optical-flow comparison writes `outputs/flow_compare/flow_metrics.csv`.
+`detect_road_from_input.py`, `detect_fused_road_pair.py`, and
+`compare_optical_flow.py` are compatibility helpers; `run_road_pipeline.py` is
+the primary entrypoint.
 
 ## Road Surface Segmentation MVP
 

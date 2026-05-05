@@ -7,6 +7,7 @@ from .flow_road_fusion import (
 )
 from .farneback_flow import FarnebackConfig, farneback_flow
 from .flow_metrics import FlowStats, flow_magnitude_angle, road_masked_flow_stats
+from .flow_comparison import compare_optical_flow_methods, write_flow_comparison_csv
 from .horn_schunck import HornSchunckConfig, horn_schunck, multiresolution_horn_schunck
 from .lucas_kanade import LucasKanadeConfig, lucas_kanade_sparse_flow, sparse_points_to_flow
 from .mask_postprocess import postprocess_road_mask, select_road_mask_from_yolo_result
@@ -31,6 +32,7 @@ __all__ = [
     "VideoRunResult",
     "analyze_road_mask",
     "average_angular_error",
+    "compare_optical_flow_methods",
     "detect_fused_road_from_paths",
     "detect_road",
     "detect_road_from_path",
@@ -52,5 +54,6 @@ __all__ = [
     "select_road_mask_from_yolo_result",
     "sparse_points_to_flow",
     "write_metrics_csv",
+    "write_flow_comparison_csv",
     "write_summary_json",
 ]

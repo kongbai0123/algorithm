@@ -10,6 +10,7 @@ from optical_flow import (
     MajorityVoteSmoother,
     VideoPipelineConfig,
     analyze_road_mask,
+    compare_optical_flow_methods,
     detect_road,
     detect_road_with_optical_flow,
     endpoint_error,
@@ -225,3 +226,20 @@ def test_video_pipeline_respects_max_frames(tmp_path: Path) -> None:
     assert result.overlay_video_path.exists()
     assert result.metrics_csv_path.exists()
     assert result.summary_json_path.exists()
+
+
+def test_flow_comparison_writes_metrics(tmp_path: Path) -> None:
+    frame1 = np.zeros((80, 120, 3), dtype=np.uint8)
+    cv2.rectangle(frame1, (20, 42), (105, 79), (120, 120, 120), thickness=-1)
+    matrix = np.float32([[1, 0, 2], [0, 1, 0]])
+    frame2 = cv2.warpAffine(frame1, matrix, (120, 80), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+    prev_path = tmp_path / "prev.png"
+    curr_path = tmp_path / "curr.png"
+    out_path = tmp_path / "flow" / "flow_metrics.csv"
+    cv2.imwrite(str(prev_path), frame1)
+    cv2.imwrite(str(curr_path), frame2)
+
+    rows = compare_optical_flow_methods(prev_path, curr_path, out_path, hs_iterations=5)
+
+    assert out_path.exists()
+    assert [row["method"] for row in rows] == ["horn_schunck", "farneback", "lucas_kanade"]

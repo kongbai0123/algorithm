@@ -8,6 +8,7 @@ import cv2
 from optical_flow import (
     RoadDetectionConfig,
     analyze_road_mask,
+    compare_optical_flow_methods,
     detect_fused_road_from_paths,
     detect_road_from_path,
     metrics_row,
@@ -84,11 +85,24 @@ def _run_pair(prev_path: Path, curr_path: Path, output_dir: Path) -> None:
     print(f"output={output_dir}")
 
 
+def _run_flow_compare(prev_path: Path, curr_path: Path, output_dir: Path, hs_iterations: int) -> None:
+    output_path = output_dir / "flow_metrics.csv"
+    rows = compare_optical_flow_methods(prev_path, curr_path, output_path, hs_iterations)
+    for row in rows:
+        print(
+            f"{row['method']}: count={row['valid_pixel_count']} "
+            f"mean_mag={float(row['mean_magnitude']):.4f} "
+            f"angle={row['direction_angle_deg']} "
+            f"consistency={float(row['consistency']):.3f}"
+        )
+    print(f"metrics_csv={output_path}")
+
+
 def main() -> None:
     base_dir = Path(__file__).resolve().parent
-    parser = argparse.ArgumentParser(description="Unified road pipeline entrypoint for image, video, and pair inputs.")
-    parser.add_argument("--source", required=True, help="image path, image directory, or video path")
-    parser.add_argument("--mode", choices=["auto", "images", "video", "pair"], default="auto", help="input mode")
+    parser = argparse.ArgumentParser(description="Unified road pipeline entrypoint for images, video, pair fusion, and flow comparison.")
+    parser.add_argument("--source", default=None, help="image path, image directory, or video path")
+    parser.add_argument("--mode", choices=["auto", "images", "video", "pair", "flow-compare"], default="auto", help="input mode")
     parser.add_argument("--method", choices=["classical", "fused"], default="classical", help="video processing method")
     parser.add_argument("--prev", default=None, help="previous image path for pair mode")
     parser.add_argument("--curr", default=None, help="current image path for pair mode")
@@ -97,15 +111,18 @@ def main() -> None:
     parser.add_argument("--save-sample-every", type=int, default=30, help="save metrics-overlay samples every N frames")
     parser.add_argument("--max-frames", type=int, default=None, help="optional frame cap for video processing")
     parser.add_argument("--progress-every", type=int, default=10, help="print video progress every N frames")
+    parser.add_argument("--hs-iterations", type=int, default=120, help="Horn-Schunck iterations for flow-compare mode")
     parser.add_argument("--write-mask-video", action="store_true", help="also write a grayscale road mask video")
     args = parser.parse_args()
 
-    source_path = _resolve_path(args.source, base_dir)
     output_dir = _resolve_path(args.out, base_dir)
     road_config = RoadDetectionConfig()
 
     mode = args.mode
     if mode == "auto":
+        if args.source is None:
+            raise ValueError("auto mode requires --source")
+        source_path = _resolve_path(args.source, base_dir)
         if source_path.suffix.lower() in VIDEO_EXTENSIONS:
             mode = "video"
         elif source_path.is_file() and source_path.suffix.lower() in IMAGE_EXTENSIONS:
@@ -114,8 +131,12 @@ def main() -> None:
             mode = "images"
         else:
             raise ValueError(f"Unable to infer mode from source: {source_path}")
+    else:
+        source_path = _resolve_path(args.source, base_dir) if args.source is not None else None
 
     if mode == "images":
+        if source_path is None:
+            raise ValueError("images mode requires --source")
         _write_image_outputs(source_path, output_dir, road_config)
         return
 
@@ -127,6 +148,16 @@ def main() -> None:
         _run_pair(prev_path, curr_path, output_dir)
         return
 
+    if mode == "flow-compare":
+        prev_path = _resolve_path(args.prev, base_dir) if args.prev is not None else None
+        curr_path = _resolve_path(args.curr, base_dir) if args.curr is not None else None
+        if prev_path is None or curr_path is None:
+            raise ValueError("flow-compare mode requires --prev and --curr")
+        _run_flow_compare(prev_path, curr_path, output_dir, args.hs_iterations)
+        return
+
+    if source_path is None:
+        raise ValueError("video mode requires --source")
     result = process_video(
         source_path,
         output_dir,
