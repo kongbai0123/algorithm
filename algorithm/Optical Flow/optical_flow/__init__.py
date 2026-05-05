@@ -15,6 +15,7 @@ from .reporting import metrics_row, write_metrics_csv, write_summary_json
 from .road_analysis import RoadMetrics, analyze_road_mask, overlay_road_metrics
 from .road_detection import RoadDetectionConfig, detect_road, detect_road_from_path, make_road_overlay
 from .temporal_smoothing import ExponentialSmoother, MajorityVoteSmoother
+from .video_pipeline import VideoPipelineConfig, VideoRunResult, process_video
 
 __all__ = [
     "ExponentialSmoother",
@@ -26,6 +27,8 @@ __all__ = [
     "MajorityVoteSmoother",
     "RoadDetectionConfig",
     "RoadMetrics",
+    "VideoPipelineConfig",
+    "VideoRunResult",
     "analyze_road_mask",
     "average_angular_error",
     "detect_fused_road_from_paths",
@@ -43,6 +46,7 @@ __all__ = [
     "multiresolution_horn_schunck",
     "overlay_road_metrics",
     "postprocess_road_mask",
+    "process_video",
     "road_masked_flow_stats",
     "save_fusion_debug_outputs",
     "select_road_mask_from_yolo_result",

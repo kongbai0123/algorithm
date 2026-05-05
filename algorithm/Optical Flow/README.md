@@ -25,6 +25,9 @@ stability.
 ```powershell
 python -m pytest
 python demo_synthetic.py
+python run_road_pipeline.py --source input
+python run_road_pipeline.py --source "input/3_Video Project.mp4" --mode video --method classical --progress-every 10
+python run_road_pipeline.py --source "input/3_Video Project.mp4" --mode video --start-frame 841 --progress-every 5
 python detect_road_from_input.py
 python train_road_segmentation.py --model yolov8n-seg.pt --data road_dataset/road.yaml
 python infer_road_segmentation.py --weights runs/road_segmentation/yolov8n_seg_mvp/weights/best.pt
@@ -36,6 +39,8 @@ The demo writes `outputs/synthetic_flow.png`.
 Road detection writes `outputs/*_road_mask.png` and `outputs/*_road_overlay.png`.
 Road detection also writes `outputs/*_road_metrics_overlay.png`.
 Road detection writes `outputs/road_metrics.csv` and `outputs/road_summary.json`.
+The main pipeline writes `outputs/main_pipeline/*_road_overlay.mp4`, `video_metrics.csv`, and sampled overlays.
+Video progress is printed as `progress=current/total`, elapsed time, and ETA.
 Flow-road fusion writes inspectable maps under `outputs/fusion_debug` by default.
 YOLO inference writes `outputs/segmentation_infer/segmentation_metrics.csv` and
 `outputs/segmentation_infer/segmentation_summary.json`.

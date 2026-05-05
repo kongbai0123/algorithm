@@ -12,6 +12,17 @@ outputs/
 **/wandb/
 **/mlruns/
 
+# Local input media should not be published directly
+**/input/*.mp4
+**/input/*.avi
+**/input/*.mov
+**/input/*.mkv
+**/input/*.jpg
+**/input/*.jpeg
+**/input/*.png
+**/input/*.bmp
+!**/input/.gitkeep
+
 # Python cache / test cache
 __pycache__/
 *.py[cod]
@@ -47,4 +58,3 @@ env/
 .idea/
 .DS_Store
 Thumbs.db
-
