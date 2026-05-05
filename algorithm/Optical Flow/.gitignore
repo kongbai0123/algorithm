@@ -1,0 +1,37 @@
+__pycache__/
+*.pyc*
+.pytest_cache/
+pytest-cache-files-*/
+outputs/
+
+# Accidental nested run output from root-level wrappers
+algorithm/
+
+# Training / experiment artifacts
+runs/
+wandb/
+mlruns/
+
+# Model weights and exported models
+*.pt
+*.pth
+*.onnx
+*.engine
+*.tflite
+*.pb
+
+# Keep dataset structure, ignore dataset payload by default
+road_dataset/images/train/*
+road_dataset/images/val/*
+road_dataset/images/test/*
+road_dataset/labels/train/*
+road_dataset/labels/val/*
+road_dataset/labels/test/*
+!road_dataset/**/.gitkeep
+!road_dataset/road.yaml
+
+# Local editor / OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
