@@ -20,6 +20,19 @@ stability.
 - PC-side road-surface segmentation project skeleton with YOLOv8-seg.
 - Road mask engineering metrics: area, center offset, smoothness, stability.
 
+## Pipeline
+
+```text
+Image / Video / Frame Pair
+  -> run_road_pipeline.py
+  -> road mask generation
+  -> mask post-processing
+  -> road metrics
+  -> optional optical-flow comparison / fusion
+  -> overlay video or images
+  -> CSV + JSON reports
+```
+
 ## Run
 
 ```powershell
@@ -31,7 +44,7 @@ python run_road_pipeline.py --source "input/3_Video Project.mp4" --mode video --
 python run_road_pipeline.py --mode pair --prev input/frame_0001.jpg --curr input/frame_0002.jpg
 python run_road_pipeline.py --mode flow-compare --prev input/frame_0001.jpg --curr input/frame_0002.jpg
 python detect_road_from_input.py
-python train_road_segmentation.py --model yolov8n-seg.pt --data road_dataset/road.yaml
+python train_road_segmentation.py --model yolov8n-seg.pt --data road_dataset/road.yaml --seed 42 --patience 20
 python infer_road_segmentation.py --weights runs/road_segmentation/yolov8n_seg_mvp/weights/best.pt
 python detect_fused_road_pair.py --prev input/frame_0001.jpg --curr input/frame_0002.jpg
 python compare_optical_flow.py --prev input/frame_0001.jpg --curr input/frame_0002.jpg
@@ -50,6 +63,27 @@ Optical-flow comparison writes `outputs/flow_compare/flow_metrics.csv`.
 `detect_road_from_input.py`, `detect_fused_road_pair.py`, and
 `compare_optical_flow.py` are compatibility helpers; `run_road_pipeline.py` is
 the primary entrypoint.
+
+## Output Metrics
+
+```text
+road_area_ratio         road mask area / image area
+road_center_offset_px   road center X minus image center X
+boundary_smoothness     contour smoothness score, higher is cleaner
+stability_label         unstable / low_confidence / stable
+flow_consistency        optical-flow direction concentration inside road ROI
+```
+
+Typical interpretation:
+
+```text
+road_area_ratio < 0.05       no effective road mask
+0.05-0.20                    low-confidence road mask
+> 0.20                       usable road mask candidate
+abs(offset) grows            road region is biased left or right
+low smoothness               fragmented or noisy mask boundary
+low flow_consistency         unstable or mixed motion in road ROI
+```
 
 ## Road Surface Segmentation MVP
 
@@ -72,4 +106,18 @@ Target class:
 road_surface
 ```
 
-Labeling rules and split policy are documented in `road_dataset/README.md`.
+Labeling rules and split policy:
+
+```text
+road_dataset/README.md
+road_dataset/LABELING_GUIDE.md
+road_dataset/SPLIT_POLICY.md
+```
+
+## Automation
+
+GitHub Actions runs:
+
+```text
+cd "algorithm/Optical Flow" && python -m pytest
+```
