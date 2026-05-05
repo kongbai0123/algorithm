@@ -6,12 +6,18 @@ import numpy as np
 from optical_flow import (
     FlowRoadFusionConfig,
     HornSchunckConfig,
+    ExponentialSmoother,
+    MajorityVoteSmoother,
     analyze_road_mask,
     detect_road_from_path,
     detect_road_with_optical_flow,
     endpoint_error,
+    farneback_flow,
+    lucas_kanade_sparse_flow,
     multiresolution_horn_schunck,
     postprocess_road_mask,
+    road_masked_flow_stats,
+    sparse_points_to_flow,
 )
 from optical_flow.image_ops import resize_flow, warp_bilinear
 
@@ -118,6 +124,49 @@ def test_postprocess_road_mask_keeps_bottom_component() -> None:
 
     assert cleaned[70, 50] > 0
     assert cleaned[10, 10] == 0
+
+
+def test_farneback_and_flow_stats_report_translation() -> None:
+    frame1 = np.zeros((64, 64), dtype=np.float32)
+    cv2.rectangle(frame1, (18, 18), (42, 42), 1.0, thickness=-1)
+    matrix = np.float32([[1, 0, 2], [0, 1, 0]])
+    frame2 = cv2.warpAffine(frame1, matrix, (64, 64), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+    mask = np.zeros_like(frame1, dtype=np.uint8)
+    mask[14:46, 14:46] = 255
+
+    u, v = farneback_flow(frame1, frame2)
+    stats = road_masked_flow_stats(u, v, mask, min_magnitude=0.01)
+
+    assert stats.valid_pixel_count > 0
+    assert stats.mean_magnitude > 0.2
+    assert stats.consistency > 0.5
+
+
+def test_lucas_kanade_sparse_flow_returns_points() -> None:
+    frame1 = np.zeros((64, 64), dtype=np.float32)
+    cv2.rectangle(frame1, (16, 16), (44, 44), 1.0, thickness=2)
+    matrix = np.float32([[1, 0, 2], [0, 1, 1]])
+    frame2 = cv2.warpAffine(frame1, matrix, (64, 64), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+    mask = np.ones_like(frame1, dtype=np.uint8) * 255
+
+    start, end, _ = lucas_kanade_sparse_flow(frame1, frame2, mask)
+    u, v, valid = sparse_points_to_flow(start, end, frame1.shape)
+    stats = road_masked_flow_stats(u, v, mask, valid)
+
+    assert start.shape[0] > 0
+    assert stats.valid_pixel_count > 0
+    assert stats.mean_u > 0.5
+
+
+def test_temporal_smoothers() -> None:
+    ema = ExponentialSmoother(alpha=0.5)
+    assert ema.update(1.0) == 1.0
+    assert ema.update(3.0) == 2.0
+
+    vote = MajorityVoteSmoother(window_size=3, required_true=2)
+    assert vote.update(True) is False
+    assert vote.update(False) is False
+    assert vote.update(True) is True
 
 
 def test_native_flow_road_fusion_returns_debug_maps() -> None:

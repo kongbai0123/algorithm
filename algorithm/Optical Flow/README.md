@@ -15,6 +15,7 @@ stability.
 - Synthetic translation demo.
 - Road detection from input images.
 - Static road score + optical-flow fusion for consecutive frames.
+- Farneback and Lucas-Kanade optical-flow comparison inside road mask ROI.
 - Relaxed Horn-Schunck updates through configurable SOR-style optimization.
 - PC-side road-surface segmentation project skeleton with YOLOv8-seg.
 - Road mask engineering metrics: area, center offset, smoothness, stability.
@@ -28,6 +29,7 @@ python detect_road_from_input.py
 python train_road_segmentation.py --model yolov8n-seg.pt --data road_dataset/road.yaml
 python infer_road_segmentation.py --weights runs/road_segmentation/yolov8n_seg_mvp/weights/best.pt
 python detect_fused_road_pair.py --prev input/frame_0001.jpg --curr input/frame_0002.jpg
+python compare_optical_flow.py --prev input/frame_0001.jpg --curr input/frame_0002.jpg
 ```
 
 The demo writes `outputs/synthetic_flow.png`.
@@ -37,6 +39,7 @@ Road detection writes `outputs/road_metrics.csv` and `outputs/road_summary.json`
 Flow-road fusion writes inspectable maps under `outputs/fusion_debug` by default.
 YOLO inference writes `outputs/segmentation_infer/segmentation_metrics.csv` and
 `outputs/segmentation_infer/segmentation_summary.json`.
+Optical-flow comparison writes `outputs/flow_compare/flow_metrics.csv`.
 
 ## Road Surface Segmentation MVP
 
