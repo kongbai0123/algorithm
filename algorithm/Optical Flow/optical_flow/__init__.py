@@ -17,6 +17,7 @@ from .road_analysis import RoadMetrics, analyze_road_mask, overlay_road_metrics
 from .road_detection import RoadDetectionConfig, detect_road, detect_road_from_path, make_road_overlay
 from .temporal_smoothing import ExponentialSmoother, MajorityVoteSmoother
 from .video_pipeline import VideoPipelineConfig, VideoRunResult, process_video
+from .yolo_segmentation import YoloRoadSegmenter, YoloSegmentationConfig
 
 __all__ = [
     "ExponentialSmoother",
@@ -30,6 +31,8 @@ __all__ = [
     "RoadMetrics",
     "VideoPipelineConfig",
     "VideoRunResult",
+    "YoloRoadSegmenter",
+    "YoloSegmentationConfig",
     "analyze_road_mask",
     "average_angular_error",
     "compare_optical_flow_methods",

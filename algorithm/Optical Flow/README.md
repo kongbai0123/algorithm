@@ -41,6 +41,9 @@ python demo_synthetic.py
 python run_road_pipeline.py --source input
 python run_road_pipeline.py --source "input/3_Video Project.mp4" --mode video --method classical --progress-every 10
 python run_road_pipeline.py --source "input/3_Video Project.mp4" --mode video --start-frame 841 --progress-every 5
+python run_road_pipeline.py --source input --mode images --method yolo-seg --weights runs/road_segmentation/yolov8n_seg_mvp/weights/best.pt
+python run_road_pipeline.py --source "input/3_Video Project.mp4" --mode video --method yolo-seg --weights runs/road_segmentation/yolov8n_seg_mvp/weights/best.pt
+python run_road_pipeline.py --source "input/3_Video Project.mp4" --mode video --method yolo-seg-fused --weights runs/road_segmentation/yolov8n_seg_mvp/weights/best.pt
 python run_road_pipeline.py --mode pair --prev input/frame_0001.jpg --curr input/frame_0002.jpg
 python run_road_pipeline.py --mode flow-compare --prev input/frame_0001.jpg --curr input/frame_0002.jpg
 python detect_road_from_input.py
@@ -120,4 +123,17 @@ GitHub Actions runs:
 
 ```text
 cd "algorithm/Optical Flow" && python -m pytest
+```
+
+## Benchmark
+
+```powershell
+python benchmark/run_benchmark.py --videos benchmark/videos --methods classical fused --max-frames 100
+python benchmark/run_benchmark.py --videos benchmark/videos --methods yolo-seg yolo-seg-fused --weights runs/road_segmentation/yolov8n_seg_mvp/weights/best.pt
+```
+
+Benchmark output:
+
+```text
+benchmark/reports/benchmark_metrics.csv
 ```

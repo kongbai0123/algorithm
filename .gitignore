@@ -22,6 +22,11 @@ outputs/
 **/input/*.png
 **/input/*.bmp
 !**/input/.gitkeep
+**/benchmark/videos/*.mp4
+**/benchmark/videos/*.avi
+**/benchmark/videos/*.mov
+**/benchmark/videos/*.mkv
+!**/benchmark/videos/.gitkeep
 
 # Python cache / test cache
 __pycache__/

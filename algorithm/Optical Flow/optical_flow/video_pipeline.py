@@ -27,8 +27,8 @@ class VideoPipelineConfig:
     stable_required_true: int = 4
 
     def validate(self) -> None:
-        if self.method not in {"classical", "fused"}:
-            raise ValueError("method must be 'classical' or 'fused'")
+        if self.method not in {"classical", "fused", "yolo-seg", "yolo-seg-fused"}:
+            raise ValueError("method must be 'classical', 'fused', 'yolo-seg', or 'yolo-seg-fused'")
         if self.start_frame < 1:
             raise ValueError("start_frame must be >= 1")
         if self.save_sample_every < 1:
@@ -108,6 +108,7 @@ def process_video(
     output_dir: str | Path,
     pipeline_config: VideoPipelineConfig | None = None,
     road_config: RoadDetectionConfig | None = None,
+    yolo_segmenter: object | None = None,
 ) -> VideoRunResult:
     cfg = pipeline_config or VideoPipelineConfig()
     cfg.validate()
@@ -174,6 +175,7 @@ def process_video(
     smoothness_smoother = ExponentialSmoother(alpha=cfg.smooth_alpha)
     valid_vote = MajorityVoteSmoother(cfg.stable_window_size, cfg.stable_required_true)
     start_time = time.perf_counter()
+    previous_yolo_mask: np.ndarray | None = None
 
     try:
         while True:
@@ -185,7 +187,17 @@ def process_video(
             frame_index += 1
             absolute_frame_index += 1
 
-            if cfg.method == "fused" and prev_frame is not None:
+            if cfg.method in {"yolo-seg", "yolo-seg-fused"}:
+                if yolo_segmenter is None or not hasattr(yolo_segmenter, "segment"):
+                    raise ValueError("YOLO video methods require a yolo_segmenter with a segment(image) method")
+                mask = yolo_segmenter.segment(frame)
+                score = (mask > 0).astype(np.float32)
+                if cfg.method == "yolo-seg-fused" and previous_yolo_mask is not None:
+                    fused = 0.7 * score + 0.3 * (previous_yolo_mask > 0).astype(np.float32)
+                    mask = np.where(fused >= 0.5, 255, 0).astype(np.uint8)
+                    score = fused
+                previous_yolo_mask = mask.copy()
+            elif cfg.method == "fused" and prev_frame is not None:
                 mask, score, _ = detect_road_with_optical_flow(prev_frame, frame, road_cfg, prev_score=prev_score)
                 prev_score = score
             else:

@@ -228,6 +228,35 @@ def test_video_pipeline_respects_max_frames(tmp_path: Path) -> None:
     assert result.summary_json_path.exists()
 
 
+def test_video_pipeline_accepts_yolo_segmenter(tmp_path: Path) -> None:
+    class FakeSegmenter:
+        def segment(self, image: np.ndarray) -> np.ndarray:
+            mask = np.zeros(image.shape[:2], dtype=np.uint8)
+            mask[int(image.shape[0] * 0.55) :, :] = 255
+            return mask
+
+    video_path = tmp_path / "synthetic_yolo.mp4"
+    writer = cv2.VideoWriter(str(video_path), cv2.VideoWriter_fourcc(*"mp4v"), 10.0, (96, 64))
+    assert writer.isOpened()
+    try:
+        for _ in range(3):
+            frame = np.zeros((64, 96, 3), dtype=np.uint8)
+            frame[:, :] = (80, 80, 80)
+            writer.write(frame)
+    finally:
+        writer.release()
+
+    result = process_video(
+        video_path,
+        tmp_path / "out_yolo",
+        VideoPipelineConfig(method="yolo-seg", max_frames=2, progress_every=1),
+        yolo_segmenter=FakeSegmenter(),
+    )
+
+    assert result.frame_count == 2
+    assert result.metrics_csv_path.exists()
+
+
 def test_flow_comparison_writes_metrics(tmp_path: Path) -> None:
     frame1 = np.zeros((80, 120, 3), dtype=np.uint8)
     cv2.rectangle(frame1, (20, 42), (105, 79), (120, 120, 120), thickness=-1)

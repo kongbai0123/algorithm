@@ -7,6 +7,8 @@ import cv2
 
 from optical_flow import (
     RoadDetectionConfig,
+    YoloRoadSegmenter,
+    YoloSegmentationConfig,
     analyze_road_mask,
     compare_optical_flow_methods,
     detect_fused_road_from_paths,
@@ -32,7 +34,13 @@ def _resolve_path(value: str, base_dir: Path) -> Path:
     return (base_dir / path).resolve()
 
 
-def _write_image_outputs(source_path: Path, output_dir: Path, config: RoadDetectionConfig) -> None:
+def _write_image_outputs(
+    source_path: Path,
+    output_dir: Path,
+    config: RoadDetectionConfig,
+    method: str,
+    yolo_segmenter: object | None = None,
+) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     if source_path.is_file():
         image_paths = [source_path]
@@ -43,7 +51,17 @@ def _write_image_outputs(source_path: Path, output_dir: Path, config: RoadDetect
 
     rows = []
     for path in image_paths:
-        image, mask, overlay = detect_road_from_path(path, config)
+        if method == "yolo-seg":
+            if yolo_segmenter is None or not hasattr(yolo_segmenter, "segment"):
+                raise ValueError("yolo-seg image mode requires --weights")
+            image = cv2.imread(str(path))
+            if image is None:
+                raise FileNotFoundError(f"Unable to read image: {path}")
+            mask = yolo_segmenter.segment(image)
+            from optical_flow import make_road_overlay
+            overlay = make_road_overlay(image, mask)
+        else:
+            image, mask, overlay = detect_road_from_path(path, config)
         metrics = analyze_road_mask(mask, image.shape)
         metrics_overlay = overlay_road_metrics(overlay, metrics)
         stem = path.stem
@@ -68,7 +86,7 @@ def _write_image_outputs(source_path: Path, output_dir: Path, config: RoadDetect
         rows,
         {
             "mode": "images",
-            "method": "classical_road_detection",
+            "method": method,
             "source": str(source_path),
             "output_dir": str(output_dir),
         },
@@ -103,7 +121,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Unified road pipeline entrypoint for images, video, pair fusion, and flow comparison.")
     parser.add_argument("--source", default=None, help="image path, image directory, or video path")
     parser.add_argument("--mode", choices=["auto", "images", "video", "pair", "flow-compare"], default="auto", help="input mode")
-    parser.add_argument("--method", choices=["classical", "fused"], default="classical", help="video processing method")
+    parser.add_argument("--method", choices=["classical", "fused", "yolo-seg", "yolo-seg-fused"], default="classical", help="road processing method")
+    parser.add_argument("--weights", default=None, help="YOLO segmentation weights for yolo-seg methods")
+    parser.add_argument("--imgsz", type=int, default=640, help="YOLO inference image size")
+    parser.add_argument("--conf", type=float, default=0.25, help="YOLO confidence threshold")
+    parser.add_argument("--min-area-ratio", type=float, default=0.01, help="minimum YOLO road component area ratio")
+    parser.add_argument("--bottom-roi-ratio", type=float, default=0.35, help="bottom ROI ratio for YOLO road components")
     parser.add_argument("--prev", default=None, help="previous image path for pair mode")
     parser.add_argument("--curr", default=None, help="current image path for pair mode")
     parser.add_argument("--out", default="outputs/main_pipeline", help="output directory")
@@ -117,6 +140,20 @@ def main() -> None:
 
     output_dir = _resolve_path(args.out, base_dir)
     road_config = RoadDetectionConfig()
+    yolo_segmenter = None
+    if args.method in {"yolo-seg", "yolo-seg-fused"}:
+        if args.weights is None:
+            raise ValueError(f"{args.method} requires --weights")
+        weights_path = _resolve_path(args.weights, base_dir)
+        yolo_segmenter = YoloRoadSegmenter(
+            YoloSegmentationConfig(
+                weights=str(weights_path),
+                imgsz=args.imgsz,
+                conf=args.conf,
+                min_area_ratio=args.min_area_ratio,
+                bottom_roi_ratio=args.bottom_roi_ratio,
+            )
+        )
 
     mode = args.mode
     if mode == "auto":
@@ -137,7 +174,9 @@ def main() -> None:
     if mode == "images":
         if source_path is None:
             raise ValueError("images mode requires --source")
-        _write_image_outputs(source_path, output_dir, road_config)
+        if args.method not in {"classical", "yolo-seg"}:
+            raise ValueError("images mode supports --method classical or yolo-seg")
+        _write_image_outputs(source_path, output_dir, road_config, args.method, yolo_segmenter)
         return
 
     if mode == "pair":
@@ -170,6 +209,7 @@ def main() -> None:
             progress_every=args.progress_every,
         ),
         road_config,
+        yolo_segmenter,
     )
     print(f"frames={result.frame_count}")
     print(f"overlay_video={result.overlay_video_path}")
