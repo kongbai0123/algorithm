@@ -8,6 +8,15 @@ from .flow_road_fusion import (
 from .farneback_flow import FarnebackConfig, farneback_flow
 from .flow_metrics import FlowStats, flow_magnitude_angle, road_masked_flow_stats
 from .flow_comparison import compare_optical_flow_methods, write_flow_comparison_csv
+from .flow_backends import (
+    FarnebackEstimator,
+    FlowEstimator,
+    FlowResult,
+    HornSchunckEstimator,
+    LucasKanadeEstimator,
+    PWCNetEstimator,
+    create_flow_estimator,
+)
 from .horn_schunck import HornSchunckConfig, horn_schunck, multiresolution_horn_schunck
 from .lucas_kanade import LucasKanadeConfig, lucas_kanade_sparse_flow, sparse_points_to_flow
 from .mask_postprocess import postprocess_road_mask, select_road_mask_from_yolo_result
@@ -15,6 +24,7 @@ from .metrics import average_angular_error, endpoint_error
 from .reporting import metrics_row, write_metrics_csv, write_summary_json
 from .road_analysis import RoadMetrics, analyze_road_mask, overlay_road_metrics
 from .road_detection import RoadDetectionConfig, detect_road, detect_road_from_path, make_road_overlay
+from .temporal_mask_fusion import flicker_flag, fuse_masks, mask_iou, warp_mask_with_flow
 from .temporal_smoothing import ExponentialSmoother, MajorityVoteSmoother
 from .video_pipeline import VideoPipelineConfig, VideoRunResult, process_video
 from .yolo_segmentation import YoloRoadSegmenter, YoloSegmentationConfig
@@ -22,11 +32,17 @@ from .yolo_segmentation import YoloRoadSegmenter, YoloSegmentationConfig
 __all__ = [
     "ExponentialSmoother",
     "FarnebackConfig",
+    "FarnebackEstimator",
+    "FlowEstimator",
     "FlowRoadFusionConfig",
+    "FlowResult",
     "FlowStats",
     "HornSchunckConfig",
+    "HornSchunckEstimator",
     "LucasKanadeConfig",
+    "LucasKanadeEstimator",
     "MajorityVoteSmoother",
+    "PWCNetEstimator",
     "RoadDetectionConfig",
     "RoadMetrics",
     "VideoPipelineConfig",
@@ -36,17 +52,21 @@ __all__ = [
     "analyze_road_mask",
     "average_angular_error",
     "compare_optical_flow_methods",
+    "create_flow_estimator",
     "detect_fused_road_from_paths",
     "detect_road",
     "detect_road_from_path",
     "detect_road_with_optical_flow",
     "endpoint_error",
     "farneback_flow",
+    "flicker_flag",
     "flow_magnitude_angle",
+    "fuse_masks",
     "horn_schunck",
     "lucas_kanade_sparse_flow",
     "make_flow_road_overlay",
     "make_road_overlay",
+    "mask_iou",
     "metrics_row",
     "multiresolution_horn_schunck",
     "overlay_road_metrics",
@@ -59,4 +79,5 @@ __all__ = [
     "write_metrics_csv",
     "write_flow_comparison_csv",
     "write_summary_json",
+    "warp_mask_with_flow",
 ]

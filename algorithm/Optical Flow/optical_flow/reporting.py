@@ -48,6 +48,8 @@ def write_metrics_csv(path: str | Path, rows: list[dict[str, Any]]) -> None:
         "overlay_path",
         "metrics_overlay_path",
     ]
+    extra_fields = sorted({key for row in rows for key in row if key not in fieldnames})
+    fieldnames.extend(extra_fields)
     with output_path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
@@ -69,4 +71,3 @@ def write_summary_json(path: str | Path, rows: list[dict[str, Any]], run_config:
         "rows": rows,
     }
     output_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
-

@@ -9,6 +9,8 @@ Run the same input videos through multiple methods and compare:
 - `mean_area`
 - `mean_smoothness`
 - `stable_rate`
+- `flicker_rate`
+- `mean_mask_iou_prev`
 - `runtime_fps`
 
 ## Expected Layout

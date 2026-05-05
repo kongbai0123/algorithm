@@ -65,7 +65,14 @@ def main() -> None:
             elapsed = max(time.perf_counter() - started, 1e-6)
             summary = _load_summary(run_out / "video_summary.json")
             frame_count = int(summary.get("image_count", 0))
-            stable_count = sum(1 for row in summary.get("rows", []) if row.get("stability_label") == "stable")
+            summary_rows = summary.get("rows", [])
+            stable_count = sum(1 for row in summary_rows if row.get("stability_label") == "stable")
+            flicker_count = sum(1 for row in summary_rows if row.get("flicker") is True)
+            iou_values = [
+                float(row["mask_iou_prev"])
+                for row in summary_rows
+                if row.get("mask_iou_prev") is not None
+            ]
             rows.append(
                 {
                     "method": method,
@@ -73,13 +80,27 @@ def main() -> None:
                     "mean_area": summary.get("mean_road_area_ratio", 0.0),
                     "mean_smoothness": summary.get("mean_boundary_smoothness", 0.0),
                     "stable_rate": stable_count / frame_count if frame_count else 0.0,
+                    "flicker_rate": flicker_count / max(frame_count - 1, 1) if frame_count > 1 else 0.0,
+                    "mean_mask_iou_prev": sum(iou_values) / len(iou_values) if iou_values else 0.0,
                     "runtime_fps": frame_count / elapsed,
                 }
             )
 
     report_path = out_dir / "benchmark_metrics.csv"
     with report_path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=["method", "video", "mean_area", "mean_smoothness", "stable_rate", "runtime_fps"])
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=[
+                "method",
+                "video",
+                "mean_area",
+                "mean_smoothness",
+                "stable_rate",
+                "flicker_rate",
+                "mean_mask_iou_prev",
+                "runtime_fps",
+            ],
+        )
         writer.writeheader()
         writer.writerows(rows)
     print(f"benchmark_csv={report_path}")

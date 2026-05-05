@@ -135,6 +135,7 @@ def main() -> None:
     parser.add_argument("--max-frames", type=int, default=None, help="optional frame cap for video processing")
     parser.add_argument("--progress-every", type=int, default=10, help="print video progress every N frames")
     parser.add_argument("--hs-iterations", type=int, default=120, help="Horn-Schunck iterations for flow-compare mode")
+    parser.add_argument("--flow-method", action="append", dest="flow_methods", help="flow backend for flow-compare mode; repeatable")
     parser.add_argument("--write-mask-video", action="store_true", help="also write a grayscale road mask video")
     args = parser.parse_args()
 
@@ -192,7 +193,15 @@ def main() -> None:
         curr_path = _resolve_path(args.curr, base_dir) if args.curr is not None else None
         if prev_path is None or curr_path is None:
             raise ValueError("flow-compare mode requires --prev and --curr")
-        _run_flow_compare(prev_path, curr_path, output_dir, args.hs_iterations)
+        rows = compare_optical_flow_methods(prev_path, curr_path, output_dir / "flow_metrics.csv", args.hs_iterations, args.flow_methods)
+        for row in rows:
+            print(
+                f"{row['method']}: count={row['valid_pixel_count']} "
+                f"mean_mag={float(row['mean_magnitude']):.4f} "
+                f"angle={row['direction_angle_deg']} "
+                f"consistency={float(row['consistency']):.3f}"
+            )
+        print(f"metrics_csv={output_dir / 'flow_metrics.csv'}")
         return
 
     if source_path is None:

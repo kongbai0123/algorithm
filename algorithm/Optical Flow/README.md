@@ -46,6 +46,7 @@ python run_road_pipeline.py --source "input/3_Video Project.mp4" --mode video --
 python run_road_pipeline.py --source "input/3_Video Project.mp4" --mode video --method yolo-seg-fused --weights runs/road_segmentation/yolov8n_seg_mvp/weights/best.pt
 python run_road_pipeline.py --mode pair --prev input/frame_0001.jpg --curr input/frame_0002.jpg
 python run_road_pipeline.py --mode flow-compare --prev input/frame_0001.jpg --curr input/frame_0002.jpg
+python run_road_pipeline.py --mode flow-compare --prev input/frame_0001.jpg --curr input/frame_0002.jpg --flow-method farneback
 python detect_road_from_input.py
 python train_road_segmentation.py --model yolov8n-seg.pt --data road_dataset/road.yaml --seed 42 --patience 20
 python infer_road_segmentation.py --weights runs/road_segmentation/yolov8n_seg_mvp/weights/best.pt
@@ -63,6 +64,9 @@ Flow-road fusion writes inspectable maps under `outputs/fusion_debug` by default
 YOLO inference writes `outputs/segmentation_infer/segmentation_metrics.csv` and
 `outputs/segmentation_infer/segmentation_summary.json`.
 Optical-flow comparison writes `outputs/flow_compare/flow_metrics.csv`.
+Flow comparison supports backend selection through `--flow-method`; `pwcnet` is
+reserved as a placeholder until a concrete PWC-Net adapter and checkpoint are
+provided.
 `detect_road_from_input.py`, `detect_fused_road_pair.py`, and
 `compare_optical_flow.py` are compatibility helpers; `run_road_pipeline.py` is
 the primary entrypoint.
@@ -75,6 +79,8 @@ road_center_offset_px   road center X minus image center X
 boundary_smoothness     contour smoothness score, higher is cleaner
 stability_label         unstable / low_confidence / stable
 flow_consistency        optical-flow direction concentration inside road ROI
+mask_iou_prev           mask overlap with the previous processed frame
+flicker                 true when adjacent mask IoU drops below threshold
 ```
 
 Typical interpretation:
@@ -137,3 +143,6 @@ Benchmark output:
 ```text
 benchmark/reports/benchmark_metrics.csv
 ```
+
+Benchmark metrics include `stable_rate`, `flicker_rate`,
+`mean_mask_iou_prev`, and `runtime_fps`.

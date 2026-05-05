@@ -11,6 +11,7 @@ from optical_flow import (
     VideoPipelineConfig,
     analyze_road_mask,
     compare_optical_flow_methods,
+    create_flow_estimator,
     detect_road,
     detect_road_with_optical_flow,
     endpoint_error,
@@ -19,8 +20,11 @@ from optical_flow import (
     multiresolution_horn_schunck,
     postprocess_road_mask,
     process_video,
+    fuse_masks,
+    mask_iou,
     road_masked_flow_stats,
     sparse_points_to_flow,
+    warp_mask_with_flow,
 )
 from optical_flow.image_ops import resize_flow, warp_bilinear
 
@@ -272,3 +276,29 @@ def test_flow_comparison_writes_metrics(tmp_path: Path) -> None:
 
     assert out_path.exists()
     assert [row["method"] for row in rows] == ["horn_schunck", "farneback", "lucas_kanade"]
+    assert all("flow_backend" in row for row in rows)
+
+
+def test_flow_backend_factory_and_pwc_placeholder() -> None:
+    assert create_flow_estimator("farneback").backend == "farneback"
+    estimator = create_flow_estimator("pwcnet")
+    frame = np.zeros((16, 16, 3), dtype=np.uint8)
+    try:
+        estimator.estimate(frame, frame)
+    except NotImplementedError as exc:
+        assert "PWC-Net backend" in str(exc)
+    else:
+        raise AssertionError("PWC-Net placeholder must require a concrete adapter")
+
+
+def test_temporal_mask_fusion_helpers() -> None:
+    mask = np.zeros((20, 20), dtype=np.uint8)
+    mask[8:14, 6:12] = 255
+    u = np.ones((20, 20), dtype=np.float32) * 2.0
+    v = np.zeros((20, 20), dtype=np.float32)
+
+    warped = warp_mask_with_flow(mask, u, v)
+    assert warped[10, 13] > 0
+    assert mask_iou(mask, mask) == 1.0
+    fused = fuse_masks(np.zeros_like(mask), mask, current_weight=0.4)
+    assert int((fused > 0).sum()) == int((mask > 0).sum())

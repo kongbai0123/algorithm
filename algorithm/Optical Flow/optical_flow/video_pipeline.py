@@ -11,6 +11,7 @@ from .flow_road_fusion import detect_road_with_optical_flow
 from .reporting import metrics_row, write_metrics_csv, write_summary_json
 from .road_analysis import RoadMetrics, analyze_road_mask, overlay_road_metrics
 from .road_detection import RoadDetectionConfig, detect_road, make_road_overlay
+from .temporal_mask_fusion import flicker_flag, mask_iou
 from .temporal_smoothing import ExponentialSmoother, MajorityVoteSmoother
 
 
@@ -176,6 +177,7 @@ def process_video(
     valid_vote = MajorityVoteSmoother(cfg.stable_window_size, cfg.stable_required_true)
     start_time = time.perf_counter()
     previous_yolo_mask: np.ndarray | None = None
+    previous_output_mask: np.ndarray | None = None
 
     try:
         while True:
@@ -208,6 +210,8 @@ def process_video(
             metrics = analyze_road_mask(mask, frame.shape)
             metrics = _smoothed_metrics(metrics, area_smoother, offset_smoother, smoothness_smoother, valid_vote)
             metrics_overlay = overlay_road_metrics(overlay, metrics)
+            mask_iou_prev = mask_iou(previous_output_mask, mask) if previous_output_mask is not None else None
+            flicker = flicker_flag(previous_output_mask, mask)
 
             overlay_writer.write(metrics_overlay)
             if mask_writer is not None:
@@ -222,16 +226,23 @@ def process_video(
                 sample_written = overlay_video_path
                 mask_written = mask_video_path or overlay_video_path
 
-            rows.append(
-                metrics_row(
-                    f"frame_{absolute_frame_index:06d}",
-                    metrics,
-                    mask_written,
-                    overlay_video_path,
-                    sample_written,
-                )
+            row = metrics_row(
+                f"frame_{absolute_frame_index:06d}",
+                metrics,
+                mask_written,
+                overlay_video_path,
+                sample_written,
             )
+            row.update(
+                {
+                    "mask_iou_prev": mask_iou_prev,
+                    "flicker": flicker,
+                    "flow_backend": "none" if cfg.method in {"classical", "yolo-seg", "yolo-seg-fused"} else "horn_schunck",
+                }
+            )
+            rows.append(row)
             prev_frame = frame.copy()
+            previous_output_mask = mask.copy()
 
             if frame_index == 1 or frame_index % cfg.progress_every == 0 or (total_frames > 0 and frame_index == total_frames):
                 elapsed = time.perf_counter() - start_time

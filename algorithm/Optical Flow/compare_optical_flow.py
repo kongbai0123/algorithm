@@ -22,6 +22,12 @@ def main() -> None:
     parser.add_argument("--curr", required=True, help="current image path")
     parser.add_argument("--out", default="outputs/flow_compare/flow_metrics.csv", help="CSV output path")
     parser.add_argument("--hs-iterations", type=int, default=120, help="Horn-Schunck iterations")
+    parser.add_argument(
+        "--flow-method",
+        action="append",
+        dest="flow_methods",
+        help="flow backend to compare; repeatable. Defaults to horn_schunck, farneback, lucas_kanade",
+    )
     args = parser.parse_args()
 
     prev_path = _resolve_path(args.prev, base_dir)
@@ -30,7 +36,7 @@ def main() -> None:
     if out_path.suffix.lower() != ".csv":
         out_path = out_path / "flow_metrics.csv"
 
-    rows = compare_optical_flow_methods(prev_path, curr_path, out_path, args.hs_iterations)
+    rows = compare_optical_flow_methods(prev_path, curr_path, out_path, args.hs_iterations, args.flow_methods)
     for row in rows:
         print(
             f"{row['method']}: count={row['valid_pixel_count']} "
