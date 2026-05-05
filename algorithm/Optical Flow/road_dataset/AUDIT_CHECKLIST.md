@@ -1,13 +1,13 @@
-# Dataset Audit Checklist
+# 資料集稽核清單
 
-Use this checklist before training or publishing a dataset split.
+在訓練或發布資料切分前，請先完成以下檢查。
 
-- Every label file uses YOLO segmentation polygon format.
-- Only visible road surface is labeled.
-- Occluded road regions are not hallucinated.
-- Sidewalks are excluded unless the task definition changes.
-- Train, validation, and test splits are separated by scene or video segment.
-- Adjacent frames from the same continuous clip do not cross splits.
-- Validation contains difficult cases such as shadows, rain, markings, parked vehicles, reflections, and damaged road.
-- `road.yaml` paths match the actual dataset structure.
-- A small visual spot-check has been performed before training.
+- 每個標註檔都使用 YOLO segmentation polygon 格式。
+- 僅標註可見道路面。
+- 不臆測被遮擋的道路區域。
+- 人行道預設排除，除非任務定義已變更。
+- train、validation、test 必須依場景或影片片段分開。
+- 同一段連續影片的相鄰影格不得跨 split。
+- validation 必須包含陰影、雨天、標線、停車、反射、破損路面等困難案例。
+- `road.yaml` 路徑必須與實際資料夾結構一致。
+- 訓練前必須做一次小規模視覺抽查。

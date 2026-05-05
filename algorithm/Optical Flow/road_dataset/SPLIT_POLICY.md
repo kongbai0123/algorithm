@@ -1,10 +1,10 @@
-# Dataset Split Policy
+# 資料切分政策
 
-## Rule
+## 規則
 
-Split by scene, route segment, or video clip. Do not randomly split adjacent video frames across train, validation, and test sets.
+必須依場景、路段或影片片段切分。不要把相鄰影片影格隨機分散到 train、validation 與 test。
 
-## Recommended Layout
+## 建議配置
 
 ```text
 scene_01 -> train
@@ -13,20 +13,20 @@ scene_03 -> val
 scene_04 -> test
 ```
 
-## Reason
+## 原因
 
-Adjacent frames from the same continuous clip are near-duplicates. If they appear in both train and validation sets, validation scores become overly optimistic and do not measure generalization.
+同一段連續影片的相鄰影格高度相似。若同時出現在 train 與 validation，驗證分數會過度樂觀，無法真正反映泛化能力。
 
-## Validation Set Coverage
+## 驗證集覆蓋
 
-Include difficult conditions intentionally:
+驗證集應刻意包含困難條件：
 
-- Shadows.
-- Night scenes.
-- Rain or wet roads.
-- Zebra crossings.
-- Lane markings.
-- Parked vehicles.
-- Different camera heights.
-- Strong reflections.
-- Damaged road surface.
+- 陰影。
+- 夜間場景。
+- 雨天或濕滑路面。
+- 斑馬線。
+- 車道標線。
+- 路邊停車。
+- 不同相機高度。
+- 強反射。
+- 破損路面。

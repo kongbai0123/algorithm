@@ -1,10 +1,10 @@
-# Benchmark Protocol
+# 基準測試規範
 
-This folder defines a repeatable benchmark protocol for road surface perception experiments.
+此資料夾定義可重複執行的道路面感知基準測試流程。
 
-## Goal
+## 目標
 
-Run the same input videos through multiple methods and compare:
+讓同一批輸入影片經過多種方法後，可以直接比較：
 
 - `mean_area`
 - `mean_smoothness`
@@ -13,7 +13,7 @@ Run the same input videos through multiple methods and compare:
 - `mean_mask_iou_prev`
 - `runtime_fps`
 
-## Expected Layout
+## 預期結構
 
 ```text
 benchmark/
@@ -23,11 +23,11 @@ benchmark/
   run_benchmark.py
 ```
 
-Input videos are local benchmark assets and should be curated before publishing.
+輸入影片屬於本地 benchmark 資產，發布前應先人工整理與確認。
 
-## Methods
+## 方法
 
-Initial comparison targets:
+初始比較目標：
 
 - `classical`
 - `fused`

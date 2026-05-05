@@ -1,27 +1,27 @@
-# Road Surface Labeling Guide
+# 道路面標註指南
 
-## Class
+## 類別
 
 ```text
 0: road_surface
 ```
 
-## Include
+## 需要納入
 
-- Visible asphalt road surface.
-- Visible concrete road surface.
-- Shadows that still fall on road surface.
-- Lane markings when they lie on road surface.
-- Zebra crossings when they lie on road surface.
-- Wet road surface or puddles when the road surface remains visible.
+- 可見的柏油路面。
+- 可見的水泥路面。
+- 落在道路面上的陰影。
+- 位於道路面上的車道標線。
+- 位於道路面上的斑馬線。
+- 路面仍可見時的濕地或積水。
 
-## Exclude
+## 需要排除
 
-- Sidewalks, unless the task definition changes.
-- Vehicles, pedestrians, cyclists, poles, buildings, walls, sky, and traffic lights.
-- Hidden road regions behind vehicles or other occluders.
-- Road regions inferred from context but not visible in the image.
+- 人行道，除非任務定義已改變。
+- 車輛、行人、自行車、電線桿、建築物、牆面、天空與交通號誌。
+- 被車輛或其他遮擋物擋住的道路區域。
+- 依上下文推測存在、但影像中不可見的道路區域。
 
-## Principle
+## 原則
 
-Label what is visibly road surface in the image, not what you know exists behind objects.
+標註的是影像中「可見的道路面」，不是你知道在物體後方存在的道路。

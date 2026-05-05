@@ -1,6 +1,6 @@
-# Benchmark Report
+# 基準測試報告
 
-## Run
+## 執行資訊
 
 ```text
 date:
@@ -9,11 +9,11 @@ source:
 methods:
 ```
 
-## Summary
+## 摘要
 
 | method | video | mean_area | mean_smoothness | stable_rate | flicker_rate | mean_mask_iou_prev | runtime_fps |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 
-## Notes
+## 備註
 
-Record qualitative issues such as false positives, missing road edges, unstable masks, and runtime regressions.
+請記錄質化問題，例如誤判、道路邊界缺漏、遮罩不穩定，以及執行效能退化。

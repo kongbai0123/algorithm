@@ -1,30 +1,30 @@
-# Road Surface Dataset
+# 道路面資料集
 
-This dataset is designed for single-class YOLO segmentation.
+此資料集設計給單類別 YOLO 分割任務使用。
 
-## Class
+## 類別
 
 ```text
 0: road_surface
 ```
 
-## Labeling Rules
+## 標註規則
 
-Detailed labeling rules are maintained in:
+詳細標註規則維護於：
 
 ```text
 road_dataset/LABELING_GUIDE.md
 ```
 
-## Split Policy
+## 切分政策
 
-Detailed split rules are maintained in:
+詳細切分規則維護於：
 
 ```text
 road_dataset/SPLIT_POLICY.md
 ```
 
-## Structure
+## 結構
 
 ```text
 road_dataset/
