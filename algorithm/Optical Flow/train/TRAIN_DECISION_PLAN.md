@@ -126,8 +126,18 @@ train/incoming/
 低對比遠端道路
 ```
 
-### Phase 3：MVP 訓練
+### Phase 2.8：資料切分政策 (Split Policy)
 
+**Decision:**
+Random split is deprecated due to video-frame leakage risk.
+
+**New policy:**
+Use scene-aware split based on filename prefix / source video / scene group.
+
+**Reason:**
+Validation score must represent unseen scene generalization, not adjacent-frame memorization.
+
+### Phase 3：模型訓練
 建議第一輪以：
 
 ```powershell

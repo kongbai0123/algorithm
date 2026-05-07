@@ -48,17 +48,52 @@ def main():
 
     print(f"共找到 {len(valid_items)} 張圖片參與訓練 (包含負樣本)。")
 
-    # 隨機打亂並切分 (70% train, 20% val, 10% test)
+    # 1. 抽取場景前綴 (Scene Grouping)
+    import re
+    from collections import defaultdict
+    groups = defaultdict(list)
+    for item in valid_items:
+        name = item[0].stem
+        scene = name
+        scene = re.sub(r'-\d+x\d+$', '', scene)
+        scene = re.sub(r'-min$', '', scene)
+        scene = re.sub(r'-\d+-\d+$', '', scene)
+        scene = re.sub(r'-\d+$', '', scene)
+        scene = re.sub(r'_\d{4,}$', '', scene)
+        scene = re.sub(r'\s*\(\d+\)$', '', scene)
+        scene = re.sub(r'\d+$', '', scene)
+        scene = scene.strip('_- ')
+        groups[scene].append(item)
+        
+    print(f"\n偵測到 {len(groups)} 個獨立場景 (Scene Groups)。")
+    for scene, items in groups.items():
+        print(f"  - {scene}: {len(items)} 張")
+
+    # 2. 以場景為單位進行隨機打亂並切分 (約 70% train, 20% val, 10% test)
     random.seed(42)  # 固定亂數種子
-    random.shuffle(valid_items)
+    scene_keys = sorted(list(groups.keys()))
+    random.shuffle(scene_keys)
+    
+    train_items = []
+    val_items = []
+    test_items = []
+    
+    for scene in scene_keys:
+        items = groups[scene]
+        curr_train_ratio = len(train_items) / max(1, len(valid_items))
+        curr_val_ratio = len(val_items) / max(1, len(valid_items))
+        
+        if curr_train_ratio < 0.7:
+            train_items.extend(items)
+        elif curr_val_ratio < 0.2:
+            val_items.extend(items)
+        else:
+            test_items.extend(items)
 
-    total = len(valid_items)
-    train_end = int(total * 0.7)
-    val_end = int(total * 0.9)
-
-    train_items = valid_items[:train_end]
-    val_items = valid_items[train_end:val_end]
-    test_items = valid_items[val_end:]
+    print(f"\n切分完成:")
+    print(f"Train: {len(train_items)} 張")
+    print(f"Val: {len(val_items)} 張")
+    print(f"Test: {len(test_items)} 張")
 
     def copy_pairs(items, split_name):
         for img_path, txt_path in items:
@@ -78,7 +113,7 @@ def main():
     copy_pairs(val_items, 'val')
     copy_pairs(test_items, 'test')
     
-    print("\n[成功] 資料集切分完畢！原始資料已安全保留，分類副本已進入 train/val/test。")
+    print("\n[成功] 資料集已完成 Scene-Aware 切分！")
 
 if __name__ == "__main__":
     main()
