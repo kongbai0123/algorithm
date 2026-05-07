@@ -35,3 +35,4 @@ road_dataset/labels/test/*
 .idea/
 .DS_Store
 Thumbs.db
+cvat
