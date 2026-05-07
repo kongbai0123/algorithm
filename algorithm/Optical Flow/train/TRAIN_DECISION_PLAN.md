@@ -128,33 +128,33 @@ train/incoming/
 
 ### Phase 2.8：資料切分政策 (Split Policy)
 
-**Decision:**
-Random split is deprecated due to video-frame leakage risk.
+**決策 (Decision):**
+正式廢棄隨機切分 (Random Split)，因其會造成影片相鄰畫格的資料洩漏 (Data Leakage) 風險。
 
-**New policy:**
-Use scene-aware split based on filename prefix / source video / scene group.
+**新政策 (New policy):**
+採用「場景隔離切分 (Scene-Aware Split)」，依據檔名前綴、來源影片或場景群組來進行切分。
 
-**Reason:**
-Validation score must represent unseen scene generalization, not adjacent-frame memorization.
+**原因 (Reason):**
+驗證集的分數必須真實反映模型對「未見過場景」的泛化能力，而不是對相鄰畫格的死背能力。
 
-## Phase 2.9: v24 Hard-Negative Repair
+### Phase 2.9：v24 困難負樣本修復 (Hard-Negative Repair)
 
-### Background
-Scene-Aware Split has replaced random image-level splitting to prevent data leakage from adjacent video frames. The v23_scene_split result provides a more reliable validation baseline.
+**背景 (Background):**
+我們已使用 Scene-Aware Split 取代隨機切分，成功防堵了資料洩漏問題。`v23_scene_split` 的結果為我們提供了一個更具可信度的驗證基準點。
 
-### Finding
-The model achieves acceptable overall segmentation performance, but Cement and Gravel show low recall, indicating under-detection in unseen scenes. Forest and Via Appia Antica remain unusually high and require hard-negative verification.
+**發現 (Finding):**
+模型整體的分割能力尚可，但水泥 (Cement) 與碎石 (Gravel) 的召回率 (Recall) 偏低，顯示在未見過的場景中容易漏抓。此外，森林 (Forest) 與古道 (Via Appia Antica) 的分數異常偏高，需要加入困難負樣本來驗證其真實性。
 
-### Decision
-The next phase will not prioritize larger model capacity. Instead, the dataset will be repaired with targeted hard-negative and underrepresented samples.
+**決策 (Decision):**
+下一階段不優先追求更大的模型容量 (如升級 YOLOv8s)。相反地，我們將專注於「精準補料」，透過補充特定的困難負樣本與少數類別來修復資料集。
 
-### Action Items
-1. Add diverse Cement samples under different lighting, distance, and surface conditions.
-2. Add diverse Gravel samples with different texture scales and shadows.
-3. Add Forest-like non-road hard negatives.
-4. Add Appia-like stone or pavement hard negatives.
-5. Re-train as road_surface_custom_v24_hard_negative_repair.
-6. Compare v23 and v24 using per-class Mask Recall, Mask mAP50, Mask mAP50-95, and failure-frame review.
+**行動項目 (Action Items):**
+1. 補充多樣化的**水泥 (Cement)** 樣本，涵蓋不同光線、距離與路面狀況。
+2. 補充多樣化的**碎石 (Gravel)** 樣本，涵蓋不同紋理大小與陰影變化。
+3. 加入類似森林環境但**非泥土路**的困難負樣本。
+4. 加入類似古道石板路但**非目標道路**的困難負樣本。
+5. 使用修復後的資料集重新訓練，命名為 `road_surface_custom_v24_hard_negative_repair`。
+6. 對比 v23 與 v24，重點觀察各類別的 Mask Recall、Mask mAP50、Mask mAP50-95，並進行失敗案例 (Failure-frame) 檢討。
 
 ### Phase 3：模型訓練
 建議第一輪以：
