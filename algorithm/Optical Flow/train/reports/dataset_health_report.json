@@ -1,0 +1,20 @@
+{
+  "Total Score": 82.5,
+  "Decision": "PASS",
+  "Decision Description": "Dataset is healthy and diverse.",
+  "Metrics": {
+    "Material Balance (20)": 13.2,
+    "Scene Diversity (20)": 19.2,
+    "Lighting/Shadow (15)": 15.0,
+    "Hard-Negative Density (20)": 20.0,
+    "Duplicate Ratio (15)": 5.8,
+    "Metadata Completeness (10)": 9.4
+  },
+  "Raw Ratios": {
+    "Completeness Ratio": 0.939,
+    "Scene Ratio": 0.479,
+    "Lighting Ratio": 0.758,
+    "Hard Negative Ratio": 0.515,
+    "Max Scene Duplicate Risk": 0.461
+  }
+}

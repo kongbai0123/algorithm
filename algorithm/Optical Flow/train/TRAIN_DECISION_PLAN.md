@@ -220,16 +220,29 @@ v25 開始，模型優化不再以單一 mAP 作為唯一依據，而是以 Fail
 ### Phase 3.8a：失敗量化驗證穩定化 (Failure Verifier Stabilization)
 
 所有 failure taxonomy 必須具備量化定義，避免依賴人工感覺：
-- `false_negative`: `gt_area_ratio > 0.02 and pred_area_ratio < 0.01`
-- `perspective_failure`: `top_region_recall < 0.3 and overall_recall >= 0.5`
-- `under_segmentation`: `iou < 0.5 and pred_area < 0.7 * gt_area`
-- `over_segmentation`: `iou < 0.5 and pred_area > 1.3 * gt_area`
+- `gt=0 且 pred=0` → `true_negative / pass`
+- `gt=0 且 pred>0` → `false_positive`
+- `gt>0 且 pred=0` → `false_negative`
+- `gt>0 且 pred<gt` → `under_segmentation`
+- `gt>0 且 pred>gt` → `over_segmentation`
 
 此工具需支援 `--conf`、`--imgsz` 與影像副檔名篩選，以確保推論穩定。
 
-### Phase 3.8b：元資料啟動 (Metadata Bootstrap)
+### Phase 3.8b：v25 目標補料 (Targeted Repair)
 
-先建立 `metadata_seed.csv`，用半人工填寫最小可用欄位 (filename, split, scene_id, source_id, material, lighting, shadow_level, hard_negative_tags)，不追求完整，讓 `dataset_health` 跨越 0 分進入可分析狀態。
+v25 補料優先順序（根據 v24 failure_verifier 診斷結果）：
+1. Belgian block / cobblestone road
+2. 低對比石板路
+3. 濕路面 / 反光路面
+4. 無道路但相似紋理的背景圖
+5. 邊界模糊的人行道 / 草地交界
+
+### Phase 3.8c：重複幀降採樣 (Duplicate Reduction)
+
+因 Duplicate Ratio 只有 5.8 / 15，需加入降採樣策略：
+- `scene_id` 內最多保留 N 張
+- 相似連續幀下採樣
+- 同場景只保留代表性樣本
 
 ### Phase 3.9：自動元資料萃取 (Auto Metadata Extraction)
 

@@ -10,7 +10,7 @@ import numpy as np
 from tqdm import tqdm
 from ultralytics import YOLO
 
-def create_binary_mask(txt_path: Path, img_shape: tuple) -> np.ndarray:
+def create_binary_mask(txt_path: Path, img_shape: tuple, valid_classes: list = None) -> np.ndarray:
     """Reads YOLO polygon format and returns a binary mask of shape (H, W)."""
     h, w = img_shape[:2]
     mask = np.zeros((h, w), dtype=np.uint8)
@@ -23,7 +23,7 @@ def create_binary_mask(txt_path: Path, img_shape: tuple) -> np.ndarray:
             if len(parts) < 3:
                 continue
             # parts[0] is class_id
-            if parts[0] != '0':
+            if valid_classes is not None and parts[0] not in valid_classes:
                 continue
             coords = [float(p) for p in parts[1:]]
             points = []
@@ -52,17 +52,23 @@ def synthesize_comparison(img: np.ndarray, gt_mask: np.ndarray, pred_mask: np.nd
     return np.hstack([gt_overlay, pred_overlay])
 
 def determine_failure_type(iou, recall, precision, gt_area_ratio, pred_area_ratio, top_region_recall, gt_area, pred_area):
+    if gt_area_ratio < 0.001 and pred_area_ratio < 0.001:
+        return "true_negative"
+        
+    if gt_area_ratio < 0.001 and pred_area_ratio >= 0.01:
+        return "false_positive"
+        
     if gt_area_ratio > 0.02 and pred_area_ratio < 0.01:
         return "false_negative"
         
-    if iou < 0.5 and pred_area < 0.7 * gt_area:
-        return "under_segmentation"
-        
-    if iou < 0.5 and pred_area > 1.3 * gt_area:
-        return "over_segmentation"
-        
     if top_region_recall < 0.3 and recall >= 0.5:
         return "perspective_failure"
+        
+    if gt_area > 0 and pred_area < 0.7 * gt_area and iou < 0.5:
+        return "under_segmentation"
+        
+    if gt_area > 0 and pred_area > 1.3 * gt_area and iou < 0.5:
+        return "over_segmentation"
         
     if iou < 0.5:
         return "other_failure"
@@ -78,7 +84,10 @@ def main():
     parser.add_argument("--conf", type=float, default=0.25, help="YOLO inference confidence threshold")
     parser.add_argument("--imgsz", type=int, default=640, help="YOLO inference image size")
     parser.add_argument("--device", type=str, default=None, help="YOLO inference device (e.g. 0 or cpu)")
+    parser.add_argument("--classes", type=str, default=None, help="Comma separated class IDs to keep (e.g. '0,1,2'). Default keeps all.")
     args = parser.parse_args()
+    
+    valid_classes = args.classes.split(',') if args.classes else None
     
     base_dir = Path(__file__).resolve().parent
     val_dir = base_dir / args.val_dir if not Path(args.val_dir).is_absolute() else Path(args.val_dir)
@@ -90,7 +99,7 @@ def main():
         return
         
     # Create taxonomy dirs
-    taxonomy_classes = ["false_negative", "under_segmentation", "over_segmentation", "perspective_failure", "boundary_collapse", "shadow_confusion", "label_noise", "other_failure", "pass"]
+    taxonomy_classes = ["false_negative", "under_segmentation", "over_segmentation", "perspective_failure", "boundary_collapse", "shadow_confusion", "label_noise", "other_failure", "false_positive", "true_negative", "pass"]
     for t in taxonomy_classes:
         (out_dir / t).mkdir(parents=True, exist_ok=True)
         
@@ -112,7 +121,7 @@ def main():
         
         # 1. Get GT Mask
         txt_path = labels_dir / (img_path.stem + ".txt")
-        gt_mask = create_binary_mask(txt_path, img.shape)
+        gt_mask = create_binary_mask(txt_path, img.shape, valid_classes)
         
         # 2. Get Pred Mask
         if args.device:
@@ -122,8 +131,10 @@ def main():
             
         pred_mask = np.zeros((h, w), dtype=np.uint8)
         if len(results) > 0 and results[0].masks is not None:
-            # results[0].masks.xy contains the polygons in original image pixel coordinates
-            for poly in results[0].masks.xy:
+            cls_idx = results[0].boxes.cls.cpu().numpy()
+            for i, poly in enumerate(results[0].masks.xy):
+                if valid_classes is not None and str(int(cls_idx[i])) not in valid_classes:
+                    continue
                 if len(poly) >= 3:
                     pts = np.array(poly, np.int32)
                     pts = pts.reshape((-1, 1, 2))

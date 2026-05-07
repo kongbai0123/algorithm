@@ -1,6 +1,7 @@
 {
-  "other_failure": 3,
-  "over_segmentation": 2,
-  "pass": 24,
-  "false_negative": 2
+  "true_negative": 3,
+  "over_segmentation": 1,
+  "pass": 26,
+  "false_negative": 2,
+  "false_positive": 1
 }
