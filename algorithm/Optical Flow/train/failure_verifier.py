@@ -23,6 +23,8 @@ def create_binary_mask(txt_path: Path, img_shape: tuple) -> np.ndarray:
             if len(parts) < 3:
                 continue
             # parts[0] is class_id
+            if parts[0] != '0':
+                continue
             coords = [float(p) for p in parts[1:]]
             points = []
             for i in range(0, len(coords), 2):
@@ -73,6 +75,9 @@ def main():
     parser.add_argument("--val-dir", type=str, default="prepared/images/val", help="Path to val images dir")
     parser.add_argument("--labels-dir", type=str, default="prepared/labels/val", help="Path to val labels dir")
     parser.add_argument("--output-dir", type=str, default="reports/failure_taxonomy", help="Output directory")
+    parser.add_argument("--conf", type=float, default=0.25, help="YOLO inference confidence threshold")
+    parser.add_argument("--imgsz", type=int, default=640, help="YOLO inference image size")
+    parser.add_argument("--device", type=str, default=None, help="YOLO inference device (e.g. 0 or cpu)")
     args = parser.parse_args()
     
     base_dir = Path(__file__).resolve().parent
@@ -93,8 +98,11 @@ def main():
     model = YOLO(args.model)
     
     report_data = []
-    img_paths = list(val_dir.glob("*.jpg")) + list(val_dir.glob("*.png"))
     
+    img_paths = []
+    for ext in ("*.jpg", "*.jpeg", "*.png", "*.bmp", "*.webp"):
+        img_paths.extend(list(val_dir.glob(ext)))
+        
     for img_path in tqdm(img_paths, desc="Verifying validation set"):
         img = cv2.imread(str(img_path))
         if img is None:
@@ -107,7 +115,11 @@ def main():
         gt_mask = create_binary_mask(txt_path, img.shape)
         
         # 2. Get Pred Mask
-        results = model(img, verbose=False, imgsz=640)
+        if args.device:
+            results = model(img, verbose=False, imgsz=args.imgsz, conf=args.conf, device=args.device)
+        else:
+            results = model(img, verbose=False, imgsz=args.imgsz, conf=args.conf)
+            
         pred_mask = np.zeros((h, w), dtype=np.uint8)
         if len(results) > 0 and results[0].masks is not None:
             # results[0].masks.xy contains the polygons in original image pixel coordinates

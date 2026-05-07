@@ -217,16 +217,23 @@ v25 開始，模型優化不再以單一 mAP 作為唯一依據，而是以 Fail
 
 若 dataset health score 低於門檻，禁止進行正式訓練。
 
-### Phase 3.8：失敗量化驗證協定 (Failure Verification Protocol)
+### Phase 3.8a：失敗量化驗證穩定化 (Failure Verifier Stabilization)
 
 所有 failure taxonomy 必須具備量化定義，避免依賴人工感覺：
-- `IoU < 0.5` → `false_negative`
-- `top_region_coverage < 0.3` → `perspective_failure`
-- `temporal IoU variance > threshold` → `temporal_flicker`
+- `false_negative`: `gt_area_ratio > 0.02 and pred_area_ratio < 0.01`
+- `perspective_failure`: `top_region_recall < 0.3 and overall_recall >= 0.5`
+- `under_segmentation`: `iou < 0.5 and pred_area < 0.7 * gt_area`
+- `over_segmentation`: `iou < 0.5 and pred_area > 1.3 * gt_area`
+
+此工具需支援 `--conf`、`--imgsz` 與影像副檔名篩選，以確保推論穩定。
+
+### Phase 3.8b：元資料啟動 (Metadata Bootstrap)
+
+先建立 `metadata_seed.csv`，用半人工填寫最小可用欄位 (filename, split, scene_id, source_id, material, lighting, shadow_level, hard_negative_tags)，不追求完整，讓 `dataset_health` 跨越 0 分進入可分析狀態。
 
 ### Phase 3.9：自動元資料萃取 (Auto Metadata Extraction)
 
-部分 metadata 改由自動分析產生，減輕人工維護成本：
+等 metadata 啟動後，再將部分特徵改由自動分析產生，減輕人工維護成本：
 - `brightness` (平均亮度)
 - `shadow_ratio` (dark pixel ratio)
 - `texture_complexity` (Laplacian variance)

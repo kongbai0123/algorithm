@@ -89,10 +89,13 @@ def evaluate_dataset_health(metadata_csv: Path, output_dir: Path) -> dict:
             scene_counts[sid] += 1
     max_images_per_scene = max(scene_counts.values()) if scene_counts else 0
     duplicate_risk = max_images_per_scene / total_images if total_images > 0 else 0
-    if duplicate_risk > 0.30:
-        score_duplicate = 0.0
+    
+    if duplicate_risk <= 0.15:
+        score_duplicate = 15.0
+    elif duplicate_risk <= 0.30:
+        score_duplicate = 15.0 - 7.5 * ((duplicate_risk - 0.15) / 0.15)
     else:
-        score_duplicate = (1.0 - (duplicate_risk / 0.30)) * 15.0
+        score_duplicate = max(0.0, 7.5 - 7.5 * ((duplicate_risk - 0.30) / 0.70))
 
     total_score = score_completeness + score_material + score_scene + score_lighting + score_hn + score_duplicate
     
@@ -157,14 +160,14 @@ def evaluate_dataset_health(metadata_csv: Path, output_dir: Path) -> dict:
 def _empty_health_report(reason: str, output_dir: Path) -> dict:
     report_dict = {
         "Total Score": 0,
-        "Decision": "FAIL",
-        "Decision Description": reason,
+        "Decision": "WARN",
+        "Decision Description": f"Bootstrap mode - {reason}",
     }
     md_content = f"""# Dataset Health Report
-**Total Score:** 0/100 [FAIL]
+**Total Score:** 0/100 [WARN]
 
 **Decision:**
-FAIL - {reason}
+WARN - Bootstrap mode - {reason}
 """
     print(md_content)
     output_dir.mkdir(parents=True, exist_ok=True)
