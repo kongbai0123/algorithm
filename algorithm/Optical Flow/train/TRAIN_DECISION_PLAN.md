@@ -193,6 +193,18 @@ train/incoming/
 
 未來 Split Policy 將逐步由 filename-based 過渡至 metadata-based。
 
+### Phase 3.4：失敗驅動資料修復 (Failure-driven Dataset Repair)
+
+v25 開始，模型優化不再以單一 mAP 作為唯一依據，而是以 Failure Taxonomy 統計結果作為補料依據。每次 validation 後，需將失敗樣本依 `false_negative`、`under_segmentation`、`over_segmentation`、`shadow_confusion`、`perspective_failure`、`temporal_flicker`、`label_noise` 等類別歸檔，並根據高頻錯誤類型制定下一輪資料補強策略。
+
+### Phase 3.5：覆蓋率優先評估 (Coverage-first Evaluation)
+
+由於道路面分割任務重視完整覆蓋，v25 起需新增 `road_recall`、`top_region_coverage`、`middle_region_coverage`、`bottom_region_coverage` 與 `under_segmentation_rate`。若 mAP 提升但道路覆蓋率下降，則不視為有效優化。
+
+### Phase 3.6：元資料填充與語意切分準備 (Metadata Population)
+
+`metadata.csv` 不再僅作為欄位骨架，需逐步填入每張圖片的 `scene_id`、`source_id`、`material`、`lighting`、`shadow_level`、`camera_angle`、`road_distance` 與 `hard_negative_tags`。後續 split.py 將從 filename-based scene split 升級為 metadata-based semantic split。
+
 ### Phase 4.1：模型訓練
 
 ```powershell
@@ -223,6 +235,18 @@ top_region_coverage
 middle_region_coverage
 bottom_region_coverage
 ```
+
+## 最終長期決策藍圖 (Roadmap)
+
+```text
+v24：完成 hard-negative repair baseline
+v25：啟動 failure-driven dataset repair
+v26：引入 metadata-based semantic split
+v27：若資料閉環成熟，再比較 YOLOv8n-seg vs YOLOv8s-seg
+v28：再考慮 temporal fusion / PWC-Net
+```
+
+> **核心精神**：目前優化程度已經高，下一步不要再堆模型；要把 v24 的失敗樣本系統化，讓資料集自己進化。
 
 ## 目前不做的事
 
