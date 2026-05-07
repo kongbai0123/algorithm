@@ -205,6 +205,34 @@ v25 開始，模型優化不再以單一 mAP 作為唯一依據，而是以 Fail
 
 `metadata.csv` 不再僅作為欄位骨架，需逐步填入每張圖片的 `scene_id`、`source_id`、`material`、`lighting`、`shadow_level`、`camera_angle`、`road_distance` 與 `hard_negative_tags`。後續 split.py 將從 filename-based scene split 升級為 metadata-based semantic split。
 
+### Phase 3.7：資料集健康評分 (Dataset Health Scoring)
+
+每輪訓練前，計算：
+- class balance score (類別均衡)
+- scene diversity score (場景多樣性)
+- lighting diversity (光線分布)
+- shadow distribution (陰影比例)
+- duplicate ratio (重複場景率)
+- hard-negative density (干擾樣本比例)
+
+若 dataset health score 低於門檻，禁止進行正式訓練。
+
+### Phase 3.8：失敗量化驗證協定 (Failure Verification Protocol)
+
+所有 failure taxonomy 必須具備量化定義，避免依賴人工感覺：
+- `IoU < 0.5` → `false_negative`
+- `top_region_coverage < 0.3` → `perspective_failure`
+- `temporal IoU variance > threshold` → `temporal_flicker`
+
+### Phase 3.9：自動元資料萃取 (Auto Metadata Extraction)
+
+部分 metadata 改由自動分析產生，減輕人工維護成本：
+- `brightness` (平均亮度)
+- `shadow_ratio` (dark pixel ratio)
+- `texture_complexity` (Laplacian variance)
+- `motion_level` (optical flow magnitude)
+- `edge_density` (Canny edge ratio)
+
 ### Phase 4.1：模型訓練
 
 ```powershell
@@ -236,17 +264,16 @@ middle_region_coverage
 bottom_region_coverage
 ```
 
-## 最終長期決策藍圖 (Roadmap)
+## 最終長期決策藍圖與優先順序 (Roadmap & Priorities)
 
-```text
-v24：完成 hard-negative repair baseline
-v25：啟動 failure-driven dataset repair
-v26：引入 metadata-based semantic split
-v27：若資料閉環成熟，再比較 YOLOv8n-seg vs YOLOv8s-seg
-v28：再考慮 temporal fusion / PWC-Net
-```
+目前核心精神：**不再依賴 mAP 總分與人工感覺，建立以數學與自動化為基礎的 Perception Governance System。**
 
-> **核心精神**：目前優化程度已經高，下一步不要再堆模型；要把 v24 的失敗樣本系統化，讓資料集自己進化。
+**優先順序：**
+1. **第一優先：Dataset Health Score** (Phase 3.7)。沒有量化的資料品質指標，Data-Centric 會淪為感覺。
+2. **第二優先：Failure Verification Protocol** (Phase 3.8)。讓錯誤分類具備數學定義 (IoU, Coverage)。
+3. **第三優先：Auto Metadata Extraction** (Phase 3.9)。自動計算亮度、複雜度等特徵，避免人工填表爆炸。
+4. **第四優先：Temporal Benchmark**。引入 temporal IoU 等動態指標，為未來的影片推論打地基。
+5. **第五優先：模型升級與硬體部署**。待上述閉環成熟後，才推進 YOLOv8s、PWC-Net 或 Jetson 部署。
 
 ## 目前不做的事
 
@@ -259,4 +286,4 @@ PWC-Net 主流程化
 複雜控制邏輯
 ```
 
-先把 `road_surface mask` 本身訓練準，再處理 temporal fusion。
+先把資料引擎的數學與評量基礎打穩，不要急著換模型！
