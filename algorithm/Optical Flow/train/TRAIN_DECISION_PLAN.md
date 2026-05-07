@@ -156,14 +156,50 @@ train/incoming/
 5. 使用修復後的資料集重新訓練，命名為 `road_surface_custom_v24_hard_negative_repair`。
 6. 對比 v23 與 v24，重點觀察各類別的 Mask Recall、Mask mAP50、Mask mAP50-95，並進行失敗案例 (Failure-frame) 檢討。
 
-### Phase 3：模型訓練
-建議第一輪以：
+### Phase 3.1：失敗分類學 (Failure Taxonomy System)
+
+建立統一錯誤分類機制：
+- `false_negative` (道路漏抓)
+- `under_segmentation` (道路有抓到，但覆蓋不足)
+- `boundary_collapse` (邊界破碎)
+- `over_segmentation` (吃到草地、人行道)
+- `shadow_confusion` (陰影誤判)
+- `perspective_failure` (遠端收斂崩潰)
+- `temporal_flicker` (前後幀跳動)
+- `label_noise` (標註本身錯誤或邊界不一致)
+
+每次 Validation 後，必須將 failure frame 分類並放入專屬目錄進行統計。
+
+### Phase 3.2：空間基準 (Spatial Benchmark)
+
+將畫面分為：
+- `top_region`
+- `middle_region`
+- `bottom_region`
+
+分別統計 Recall, IoU, Coverage。
+原因：遠端道路通常最容易崩潰，不能只看 Overall mAP。
+
+### Phase 3.3：元資料治理 (Metadata Governance)
+
+每筆資料應記錄於 `metadata.csv`：
+- `material`
+- `weather`
+- `lighting`
+- `shadow_level`
+- `camera_angle`
+- `scene_id`
+- 等擴充欄位...
+
+未來 Split Policy 將逐步由 filename-based 過渡至 metadata-based。
+
+### Phase 4.1：模型訓練
 
 ```powershell
 python train_road_segmentation.py --model yolov8n-seg.pt --data train/prepared/road.yaml --imgsz 640 --epochs 100 --batch 8 --seed 42 --patience 20 --name road_surface_custom_v1
 ```
 
-### Phase 4：參數客製化
+### Phase 4.2：推論參數客製化
 
 推論時先優先調：
 
@@ -175,7 +211,7 @@ min_area_ratio
 
 之後再視需要擴充 morphology kernel 參數。
 
-### Phase 5：評估
+### Phase 5：進階評估指標
 
 除既有指標外，後續應補：
 
