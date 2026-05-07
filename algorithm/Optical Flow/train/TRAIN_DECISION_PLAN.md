@@ -137,6 +137,25 @@ Use scene-aware split based on filename prefix / source video / scene group.
 **Reason:**
 Validation score must represent unseen scene generalization, not adjacent-frame memorization.
 
+## Phase 2.9: v24 Hard-Negative Repair
+
+### Background
+Scene-Aware Split has replaced random image-level splitting to prevent data leakage from adjacent video frames. The v23_scene_split result provides a more reliable validation baseline.
+
+### Finding
+The model achieves acceptable overall segmentation performance, but Cement and Gravel show low recall, indicating under-detection in unseen scenes. Forest and Via Appia Antica remain unusually high and require hard-negative verification.
+
+### Decision
+The next phase will not prioritize larger model capacity. Instead, the dataset will be repaired with targeted hard-negative and underrepresented samples.
+
+### Action Items
+1. Add diverse Cement samples under different lighting, distance, and surface conditions.
+2. Add diverse Gravel samples with different texture scales and shadows.
+3. Add Forest-like non-road hard negatives.
+4. Add Appia-like stone or pavement hard negatives.
+5. Re-train as road_surface_custom_v24_hard_negative_repair.
+6. Compare v23 and v24 using per-class Mask Recall, Mask mAP50, Mask mAP50-95, and failure-frame review.
+
 ### Phase 3：模型訓練
 建議第一輪以：
 
