@@ -30,6 +30,9 @@ class VideoPipelineConfig:
     stable_required_true: int = 4
     fusion_flow_method: str = "farneback"
     fusion_alpha: float = 0.7
+    fusion_flow_scale: str = "0.5"
+    fusion_flow_every: int = 2
+    fusion_flow_roi_ratio: float = 0.5
     profile: bool = False
     profile_out: str = "outputs/profile"
 
@@ -184,7 +187,7 @@ def process_video(
     smoothness_smoother = ExponentialSmoother(alpha=cfg.smooth_alpha)
     valid_vote = MajorityVoteSmoother(cfg.stable_window_size, cfg.stable_required_true)
     start_time = time.perf_counter()
-    previous_yolo_mask: np.ndarray | None = None
+    previous_temporal_mask: np.ndarray | None = None
     previous_output_mask: np.ndarray | None = None
     
     profiler = None
@@ -206,6 +209,22 @@ def process_video(
         fusion = WarpTemporalFusion(alpha=cfg.fusion_alpha)
         from .flow import create_flow_estimator
         fusion_flow_estimator = create_flow_estimator(cfg.fusion_flow_method)
+        
+        cached_flow = None
+        
+        # Parse flow scale
+        flow_scale = 0.5
+        if cfg.fusion_flow_scale == "auto":
+            width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            if max(width, height) <= 640:
+                flow_scale = 1.0
+            elif max(width, height) <= 1280:
+                flow_scale = 0.5
+            else:
+                flow_scale = 0.25
+        else:
+            flow_scale = float(cfg.fusion_flow_scale)
 
     try:
         while True:
@@ -230,22 +249,66 @@ def process_video(
                 frame_timings["segmentation"] = time.perf_counter() - t0
                 score = (mask > 0).astype(np.float32)
                 
-                if cfg.method == "yolo-seg-fused" and previous_yolo_mask is not None:
+                if cfg.method == "yolo-seg-fused" and previous_temporal_mask is not None:
                     if fusion is None:
                         raise ValueError("Fusion not initialized for yolo-seg-fused")
                     
-                    t0 = time.perf_counter()
                     flow_result = None
                     if prev_frame is not None and fusion_flow_estimator is not None:
-                        flow_result = fusion_flow_estimator.estimate(prev_frame, frame)
-                    frame_timings["flow"] = time.perf_counter() - t0
+                        # Check every N frames or if no cache
+                        if frame_index % cfg.fusion_flow_every == 0 or cached_flow is None:
+                            
+                            t_roi = time.perf_counter()
+                            # Apply ROI (bottom part)
+                            h, w = frame.shape[:2]
+                            roi_h = int(h * cfg.fusion_flow_roi_ratio)
+                            roi_start_y = h - roi_h
+                            
+                            curr_roi = frame[roi_start_y:h, 0:w]
+                            prev_roi = prev_frame[roi_start_y:h, 0:w]
+                            frame_timings["flow_roi_crop"] = time.perf_counter() - t_roi
+                            
+                            t_resize = time.perf_counter()
+                            # Apply Scale
+                            if flow_scale != 1.0:
+                                curr_roi_scaled = cv2.resize(curr_roi, (0, 0), fx=flow_scale, fy=flow_scale)
+                                prev_roi_scaled = cv2.resize(prev_roi, (0, 0), fx=flow_scale, fy=flow_scale)
+                            else:
+                                curr_roi_scaled = curr_roi
+                                prev_roi_scaled = prev_roi
+                            frame_timings["flow_resize_in"] = time.perf_counter() - t_resize
+                            
+                            t_est = time.perf_counter()
+                            # Estimate backward flow (curr -> prev)
+                            roi_flow = fusion_flow_estimator.estimate(curr_roi_scaled, prev_roi_scaled)
+                            u, v = roi_flow.u, roi_flow.v
+                            frame_timings["flow_estimation"] = time.perf_counter() - t_est
+                            
+                            t_res_out = time.perf_counter()
+                            # Resize flow back to ROI size
+                            from optical_flow.image_ops import resize_flow
+                            u_full, v_full = resize_flow(u, v, (roi_h, w))
+                            
+                            # Create full frame flow with zeros for non-ROI part
+                            u_full_frame = np.zeros((h, w), dtype=np.float32)
+                            v_full_frame = np.zeros((h, w), dtype=np.float32)
+                            u_full_frame[roi_start_y:h, 0:w] = u_full
+                            v_full_frame[roi_start_y:h, 0:w] = v_full
+                            
+                            cached_flow = (u_full_frame, v_full_frame)
+                            frame_timings["flow_resize_out"] = time.perf_counter() - t_res_out
+                        else:
+                            # Reuse cached flow
+                            u_full_frame, v_full_frame = cached_flow
+                            
+                        flow_result = (u_full_frame, v_full_frame)
                     
                     t0 = time.perf_counter()
-                    mask = fusion.fuse(mask, previous_yolo_mask, flow_result)
+                    mask = fusion.fuse(mask, previous_temporal_mask, flow_result)
                     frame_timings["fusion"] = time.perf_counter() - t0
                     score = (mask > 0).astype(np.float32)
                 
-                previous_yolo_mask = mask.copy()
+                previous_temporal_mask = mask.copy()
                 prev_score = score
 
             t0 = time.perf_counter()
@@ -291,7 +354,7 @@ def process_video(
                 {
                     "mask_iou_prev": mask_iou_prev,
                     "flicker": flicker,
-                    "flow_backend": "none" if cfg.method in {"classical", "yolo-seg", "yolo-seg-fused"} else "horn_schunck",
+                    "flow_backend": cfg.fusion_flow_method if cfg.method == "yolo-seg-fused" else ("horn_schunck" if cfg.method == "fused" else "none"),
                 }
             )
             rows.append(row)

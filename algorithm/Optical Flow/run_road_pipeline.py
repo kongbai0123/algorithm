@@ -133,6 +133,9 @@ def main() -> None:
     parser.add_argument("--start-frame", type=int, default=1, help="1-based frame index for video resume")
     parser.add_argument("--fusion-flow-method", default="farneback", help="flow backend for warp fusion")
     parser.add_argument("--fusion-alpha", type=float, default=0.7, help="alpha for temporal fusion (higher means more weight to current frame)")
+    parser.add_argument("--fusion-flow-scale", default="0.5", help="scale factor for flow calculation (float or 'auto')")
+    parser.add_argument("--fusion-flow-every", type=int, default=2, help="calculate flow every N frames and reuse")
+    parser.add_argument("--fusion-flow-roi-ratio", type=float, default=0.5, help="ratio of bottom ROI for flow calculation")
     parser.add_argument("--save-sample-every", type=int, default=30, help="save metrics-overlay samples every N frames")
     parser.add_argument("--max-frames", type=int, default=None, help="optional frame cap for video processing")
     parser.add_argument("--progress-every", type=int, default=10, help="print video progress every N frames")
@@ -222,6 +225,9 @@ def main() -> None:
             progress_every=args.progress_every,
             fusion_flow_method=args.fusion_flow_method,
             fusion_alpha=args.fusion_alpha,
+            fusion_flow_scale=args.fusion_flow_scale,
+            fusion_flow_every=args.fusion_flow_every,
+            fusion_flow_roi_ratio=args.fusion_flow_roi_ratio,
             profile=args.profile,
             profile_out=args.profile_out,
         ),

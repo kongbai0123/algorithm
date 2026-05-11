@@ -7,11 +7,23 @@ on:
 jobs:
   pytest:
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: "algorithm/Optical Flow"
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: python -m pip install --upgrade pip
-      - run: pip install -r "algorithm/Optical Flow/requirements.txt"
-      - run: cd "algorithm/Optical Flow" && python -m pytest
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements/dev.txt
+
+      - name: Run tests
+        run: python -m pytest
