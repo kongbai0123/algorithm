@@ -30,6 +30,8 @@ class VideoPipelineConfig:
     stable_required_true: int = 4
     fusion_flow_method: str = "farneback"
     fusion_alpha: float = 0.7
+    profile: bool = False
+    profile_out: str = "outputs/profile"
 
     def validate(self) -> None:
         if self.method not in {"classical", "fused", "yolo-seg", "yolo-seg-fused"}:
@@ -184,6 +186,11 @@ def process_video(
     start_time = time.perf_counter()
     previous_yolo_mask: np.ndarray | None = None
     previous_output_mask: np.ndarray | None = None
+    
+    profiler = None
+    if cfg.profile:
+        from .profiling import RuntimeProfiler
+        profiler = RuntimeProfiler()
 
     # Initialize abstractions
     segmenter = None
@@ -210,36 +217,50 @@ def process_video(
             frame_index += 1
             absolute_frame_index += 1
 
+            frame_timings = {}
+            
             if cfg.method == "fused" and prev_frame is not None:
+                t0 = time.perf_counter()
                 mask, score, _ = detect_road_with_optical_flow(prev_frame, frame, road_cfg, prev_score=prev_score)
+                frame_timings["flow_and_seg"] = time.perf_counter() - t0
                 prev_score = score
             else:
-                if segmenter is None:
-                    raise ValueError(f"Segmenter not initialized for method: {cfg.method}")
+                t0 = time.perf_counter()
                 mask = segmenter.segment(frame)
+                frame_timings["segmentation"] = time.perf_counter() - t0
                 score = (mask > 0).astype(np.float32)
                 
                 if cfg.method == "yolo-seg-fused" and previous_yolo_mask is not None:
                     if fusion is None:
                         raise ValueError("Fusion not initialized for yolo-seg-fused")
                     
+                    t0 = time.perf_counter()
                     flow_result = None
                     if prev_frame is not None and fusion_flow_estimator is not None:
                         flow_result = fusion_flow_estimator.estimate(prev_frame, frame)
-                        
+                    frame_timings["flow"] = time.perf_counter() - t0
+                    
+                    t0 = time.perf_counter()
                     mask = fusion.fuse(mask, previous_yolo_mask, flow_result)
+                    frame_timings["fusion"] = time.perf_counter() - t0
                     score = (mask > 0).astype(np.float32)
                 
                 previous_yolo_mask = mask.copy()
                 prev_score = score
 
+            t0 = time.perf_counter()
             overlay = make_road_overlay(frame, mask)
             metrics = analyze_road_mask(mask, frame.shape)
             metrics = _smoothed_metrics(metrics, area_smoother, offset_smoother, smoothness_smoother, valid_vote)
             metrics_overlay = overlay_road_metrics(overlay, metrics)
+            frame_timings["postprocess"] = time.perf_counter() - t0
+
+            t0 = time.perf_counter()
             mask_iou_prev = mask_iou(previous_output_mask, mask) if previous_output_mask is not None else None
             flicker = flicker_flag(previous_output_mask, mask)
+            frame_timings["metrics"] = time.perf_counter() - t0
 
+            t0 = time.perf_counter()
             overlay_writer.write(metrics_overlay)
             if mask_writer is not None:
                 mask_writer.write(cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR))
@@ -252,6 +273,12 @@ def process_video(
             else:
                 sample_written = overlay_video_path
                 mask_written = mask_video_path or overlay_video_path
+            frame_timings["io_write"] = time.perf_counter() - t0
+
+            if profiler is not None:
+                profiler.record_frame(frame_index, frame_timings)
+                for name, sec in frame_timings.items():
+                    profiler.record_block(name, sec)
 
             row = metrics_row(
                 f"frame_{absolute_frame_index:06d}",
@@ -293,6 +320,13 @@ def process_video(
     metrics_csv_path = out_dir / "video_metrics.csv"
     summary_json_path = out_dir / "video_summary.json"
     write_metrics_csv(metrics_csv_path, rows)
+    
+    if profiler is not None:
+        profile_summary_path = Path(cfg.profile_out + "_summary.json")
+        profile_metrics_path = Path(cfg.profile_out + "_metrics.csv")
+        profiler.save_results(profile_summary_path, profile_metrics_path)
+        print(f"profile_summary={profile_summary_path}")
+        print(f"profile_metrics={profile_metrics_path}")
     write_summary_json(
         summary_json_path,
         rows,

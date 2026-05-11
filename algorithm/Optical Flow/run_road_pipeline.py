@@ -139,6 +139,8 @@ def main() -> None:
     parser.add_argument("--hs-iterations", type=int, default=120, help="Horn-Schunck iterations for flow-compare mode")
     parser.add_argument("--flow-method", action="append", dest="flow_methods", help="flow backend for flow-compare mode; repeatable")
     parser.add_argument("--write-mask-video", action="store_true", help="also write a grayscale road mask video")
+    parser.add_argument("--profile", action="store_true", help="enable runtime profiling")
+    parser.add_argument("--profile-out", default="outputs/profile", help="prefix for profile output files")
     args = parser.parse_args()
 
     output_dir = _resolve_path(args.out, base_dir)
@@ -220,6 +222,8 @@ def main() -> None:
             progress_every=args.progress_every,
             fusion_flow_method=args.fusion_flow_method,
             fusion_alpha=args.fusion_alpha,
+            profile=args.profile,
+            profile_out=args.profile_out,
         ),
         road_config,
         yolo_segmenter,
