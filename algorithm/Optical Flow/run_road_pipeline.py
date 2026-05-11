@@ -131,6 +131,8 @@ def main() -> None:
     parser.add_argument("--curr", default=None, help="current image path for pair mode")
     parser.add_argument("--out", default="outputs/main_pipeline", help="output directory")
     parser.add_argument("--start-frame", type=int, default=1, help="1-based frame index for video resume")
+    parser.add_argument("--fusion-flow-method", default="farneback", help="flow backend for warp fusion")
+    parser.add_argument("--fusion-alpha", type=float, default=0.7, help="alpha for temporal fusion (higher means more weight to current frame)")
     parser.add_argument("--save-sample-every", type=int, default=30, help="save metrics-overlay samples every N frames")
     parser.add_argument("--max-frames", type=int, default=None, help="optional frame cap for video processing")
     parser.add_argument("--progress-every", type=int, default=10, help="print video progress every N frames")
@@ -216,6 +218,8 @@ def main() -> None:
             max_frames=args.max_frames,
             write_mask_video=args.write_mask_video,
             progress_every=args.progress_every,
+            fusion_flow_method=args.fusion_flow_method,
+            fusion_alpha=args.fusion_alpha,
         ),
         road_config,
         yolo_segmenter,

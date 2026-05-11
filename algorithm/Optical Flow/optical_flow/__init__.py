@@ -20,7 +20,6 @@ from .flow_backends import (
 from .horn_schunck import HornSchunckConfig, horn_schunck, multiresolution_horn_schunck
 from .lucas_kanade import LucasKanadeConfig, lucas_kanade_sparse_flow, sparse_points_to_flow
 from .mask_postprocess import postprocess_road_mask, select_road_mask_from_yolo_result
-from .metrics import average_angular_error, endpoint_error
 from .reporting import metrics_row, write_metrics_csv, write_summary_json
 from .road_analysis import RoadMetrics, analyze_road_mask, overlay_road_metrics
 from .road_detection import RoadDetectionConfig, detect_road, detect_road_from_path, make_road_overlay
@@ -50,14 +49,12 @@ __all__ = [
     "YoloRoadSegmenter",
     "YoloSegmentationConfig",
     "analyze_road_mask",
-    "average_angular_error",
     "compare_optical_flow_methods",
     "create_flow_estimator",
     "detect_fused_road_from_paths",
     "detect_road",
     "detect_road_from_path",
     "detect_road_with_optical_flow",
-    "endpoint_error",
     "farneback_flow",
     "flicker_flag",
     "flow_magnitude_angle",

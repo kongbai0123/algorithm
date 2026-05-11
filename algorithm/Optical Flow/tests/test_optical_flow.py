@@ -8,10 +8,22 @@ from optical_flow import (
     HornSchunckConfig,
     detect_road_from_path,
     detect_road_with_optical_flow,
-    endpoint_error,
     multiresolution_horn_schunck,
 )
 from optical_flow.image_ops import resize_flow, warp_bilinear
+
+
+def endpoint_error(
+    estimated_u: np.ndarray,
+    estimated_v: np.ndarray,
+    target_u: np.ndarray,
+    target_v: np.ndarray,
+) -> float:
+    eu = np.asarray(estimated_u, dtype=np.float32)
+    ev = np.asarray(estimated_v, dtype=np.float32)
+    tu = np.asarray(target_u, dtype=np.float32)
+    tv = np.asarray(target_v, dtype=np.float32)
+    return float(np.mean(np.sqrt((eu - tu) ** 2 + (ev - tv) ** 2)))
 
 
 def test_resize_flow_scales_vectors() -> None:

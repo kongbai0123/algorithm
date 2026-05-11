@@ -77,12 +77,14 @@ def main() -> None:
                 {
                     "method": method,
                     "video": video_path.name,
-                    "mean_area": summary.get("mean_road_area_ratio", 0.0),
-                    "mean_smoothness": summary.get("mean_boundary_smoothness", 0.0),
+                    "frames": frame_count,
                     "stable_rate": stable_count / frame_count if frame_count else 0.0,
                     "flicker_rate": flicker_count / max(frame_count - 1, 1) if frame_count > 1 else 0.0,
                     "mean_mask_iou_prev": sum(iou_values) / len(iou_values) if iou_values else 0.0,
+                    "mean_road_area_ratio": summary.get("mean_road_area_ratio", 0.0),
+                    "mean_boundary_smoothness": summary.get("mean_boundary_smoothness", 0.0),
                     "runtime_fps": frame_count / elapsed,
+                    "elapsed_sec": elapsed,
                 }
             )
 
@@ -93,12 +95,14 @@ def main() -> None:
             fieldnames=[
                 "method",
                 "video",
-                "mean_area",
-                "mean_smoothness",
+                "frames",
                 "stable_rate",
                 "flicker_rate",
                 "mean_mask_iou_prev",
+                "mean_road_area_ratio",
+                "mean_boundary_smoothness",
                 "runtime_fps",
+                "elapsed_sec",
             ],
         )
         writer.writeheader()

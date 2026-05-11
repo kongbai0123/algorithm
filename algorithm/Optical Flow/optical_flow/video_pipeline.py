@@ -13,6 +13,8 @@ from .road_analysis import RoadMetrics, analyze_road_mask, overlay_road_metrics
 from .road_detection import RoadDetectionConfig, detect_road, make_road_overlay
 from .temporal_mask_fusion import flicker_flag, mask_iou
 from .temporal_smoothing import ExponentialSmoother, MajorityVoteSmoother
+from .segmenters import ClassicalRoadSegmenter
+from .temporal import EMATemporalFusion
 
 
 @dataclass(frozen=True)
@@ -26,6 +28,8 @@ class VideoPipelineConfig:
     smooth_alpha: float = 0.7
     stable_window_size: int = 5
     stable_required_true: int = 4
+    fusion_flow_method: str = "farneback"
+    fusion_alpha: float = 0.7
 
     def validate(self) -> None:
         if self.method not in {"classical", "fused", "yolo-seg", "yolo-seg-fused"}:
@@ -40,6 +44,8 @@ class VideoPipelineConfig:
             raise ValueError("progress_every must be >= 1")
         if not 0.0 <= self.smooth_alpha <= 1.0:
             raise ValueError("smooth_alpha must be between 0 and 1")
+        if not 0.0 <= self.fusion_alpha <= 1.0:
+            raise ValueError("fusion_alpha must be between 0 and 1")
         if self.stable_window_size < 1:
             raise ValueError("stable_window_size must be >= 1")
         if not 1 <= self.stable_required_true <= self.stable_window_size:
@@ -179,6 +185,21 @@ def process_video(
     previous_yolo_mask: np.ndarray | None = None
     previous_output_mask: np.ndarray | None = None
 
+    # Initialize abstractions
+    segmenter = None
+    fusion = None
+    fusion_flow_estimator = None
+    if cfg.method in {"yolo-seg", "yolo-seg-fused"}:
+        segmenter = yolo_segmenter
+    else:
+        segmenter = ClassicalRoadSegmenter(road_cfg)
+        
+    if cfg.method == "yolo-seg-fused":
+        from .temporal import WarpTemporalFusion
+        fusion = WarpTemporalFusion(alpha=cfg.fusion_alpha)
+        from .flow import create_flow_estimator
+        fusion_flow_estimator = create_flow_estimator(cfg.fusion_flow_method)
+
     try:
         while True:
             if cfg.max_frames is not None and frame_index >= cfg.max_frames:
@@ -189,21 +210,27 @@ def process_video(
             frame_index += 1
             absolute_frame_index += 1
 
-            if cfg.method in {"yolo-seg", "yolo-seg-fused"}:
-                if yolo_segmenter is None or not hasattr(yolo_segmenter, "segment"):
-                    raise ValueError("YOLO video methods require a yolo_segmenter with a segment(image) method")
-                mask = yolo_segmenter.segment(frame)
-                score = (mask > 0).astype(np.float32)
-                if cfg.method == "yolo-seg-fused" and previous_yolo_mask is not None:
-                    fused = 0.7 * score + 0.3 * (previous_yolo_mask > 0).astype(np.float32)
-                    mask = np.where(fused >= 0.5, 255, 0).astype(np.uint8)
-                    score = fused
-                previous_yolo_mask = mask.copy()
-            elif cfg.method == "fused" and prev_frame is not None:
+            if cfg.method == "fused" and prev_frame is not None:
                 mask, score, _ = detect_road_with_optical_flow(prev_frame, frame, road_cfg, prev_score=prev_score)
                 prev_score = score
             else:
-                mask, score = detect_road(frame, road_cfg)
+                if segmenter is None:
+                    raise ValueError(f"Segmenter not initialized for method: {cfg.method}")
+                mask = segmenter.segment(frame)
+                score = (mask > 0).astype(np.float32)
+                
+                if cfg.method == "yolo-seg-fused" and previous_yolo_mask is not None:
+                    if fusion is None:
+                        raise ValueError("Fusion not initialized for yolo-seg-fused")
+                    
+                    flow_result = None
+                    if prev_frame is not None and fusion_flow_estimator is not None:
+                        flow_result = fusion_flow_estimator.estimate(prev_frame, frame)
+                        
+                    mask = fusion.fuse(mask, previous_yolo_mask, flow_result)
+                    score = (mask > 0).astype(np.float32)
+                
+                previous_yolo_mask = mask.copy()
                 prev_score = score
 
             overlay = make_road_overlay(frame, mask)
