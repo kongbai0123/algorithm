@@ -143,6 +143,9 @@ def main() -> None:
     parser.add_argument("--resume", action="store_true", help="resume an interrupted training run")
     parser.add_argument("--exist-ok", action="store_true", help="allow overwriting an existing run folder")
     parser.add_argument("--enforce-health-gate", action="store_true", help="enforce dataset health score >= 80 to train")
+    parser.add_argument("--dropout", type=float, default=0.0, help="dropout rate")
+    parser.add_argument("--weight-decay", type=float, default=0.0005, help="weight decay")
+    parser.add_argument("--cls", type=float, default=1.0, help="cls loss weight")
     args = parser.parse_args()
 
     data_path = Path(args.data)
@@ -196,6 +199,9 @@ def main() -> None:
         "fliplr": 0.5,
         "mosaic": 0.0,
         "mixup": 0.0,
+        "dropout": args.dropout,
+        "weight_decay": args.weight_decay,
+        "cls": args.cls,
     }
     if args.device is not None:
         train_kwargs["device"] = args.device

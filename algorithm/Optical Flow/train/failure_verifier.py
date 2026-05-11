@@ -166,6 +166,10 @@ def main():
         # 4. Decision Tree
         failure_type = determine_failure_type(iou, recall, precision, gt_area_ratio, pred_area_ratio, top_region_recall, gt_area, pred_area)
         
+        # Check if bottom connected (New for Semantic Corridor Audit)
+        bottom_h = max(1, int(h * 0.05))
+        is_bottom_connected = bool(np.any(pred_mask[h - bottom_h:, :] == 1)) if pred_area > 0 else True
+        
         # 5. Output record
         report_data.append({
             "filename": img_path.name,
@@ -175,7 +179,8 @@ def main():
             "gt_area_ratio": round(gt_area_ratio, 4),
             "pred_area_ratio": round(pred_area_ratio, 4),
             "top_region_recall": round(top_region_recall, 4),
-            "failure_type": failure_type
+            "failure_type": failure_type,
+            "bottom_connected": is_bottom_connected
         })
         
         # 6. Synthesize Comparison Image if failed
@@ -187,7 +192,7 @@ def main():
     # Write CSV
     csv_path = out_dir.parent / "failure_verification_report.csv"
     with open(csv_path, 'w', newline='', encoding='utf-8') as f:
-        writer = csv.DictWriter(f, fieldnames=["filename", "iou", "precision", "recall", "gt_area_ratio", "pred_area_ratio", "top_region_recall", "failure_type"])
+        writer = csv.DictWriter(f, fieldnames=["filename", "iou", "precision", "recall", "gt_area_ratio", "pred_area_ratio", "top_region_recall", "failure_type", "bottom_connected"])
         writer.writeheader()
         for row in report_data:
             writer.writerow(row)

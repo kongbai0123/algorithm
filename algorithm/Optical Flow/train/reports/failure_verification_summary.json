@@ -1,7 +1,9 @@
 {
-  "true_negative": 3,
-  "over_segmentation": 1,
-  "pass": 26,
-  "false_negative": 2,
+  "under_segmentation": 2,
+  "true_negative": 6,
+  "false_negative": 13,
+  "other_failure": 1,
+  "pass": 24,
+  "perspective_failure": 2,
   "false_positive": 1
 }
